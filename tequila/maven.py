@@ -1,20 +1,21 @@
-import hashlib
+import logging
+import subprocess
 from string import Template
 from urllib.request import FancyURLopener
-import sys
-import math
-
-
-class ChecksumNotMatchingError(Exception):
-    pass
+from tequila.download import download
+from tequila.path import copy
 
 
 class Artifact(object):
-    def __init__(self, groupid, artifactid, version,
-                 template=Template('$groupid/$artifactid/$version/$artifactid-$version.$ext')):
+
+    def __init__(self, groupid, artifactid, version):
         self.groupid = groupid
         self.artifactid = artifactid
         self.version = version
+        self.name = '%s:%s:%s' % (groupid, artifactid, version)
+        self.filename = '%s-%s.jar' % (artifactid, version)
+
+        template = Template('$groupid/$artifactid/$version/$artifactid-$version.$ext')
 
         self.jar = template.substitute(
             groupid=groupid.replace('.', '/'),
@@ -28,79 +29,94 @@ class Artifact(object):
             version=version,
             ext='pom')
 
+    @classmethod
+    def from_url(cls, url):
+        """
+        Constructs an artifact from a maven url (maven://groupid:artifactid:version)
+        :type url: string
+        """
+        return cls(*url[8:].split(':', 2))
+
+
+class Repository(object):
+    def __init__(self, name, url):
+        self.name = name
+        self.url = url
+
 
 class ArtifactResolver(object):
     def __init__(self):
         self.artifacts = []
+        self.repositories = []
+        self.logger = logging.getLogger("ArtifactResolver")
 
     def enqueue(self, artifact):
-        self.artifacts += artifact
+        self.logger.info('Added artifact %s', artifact.name)
+        self.artifacts.append(artifact)
 
-    def download_artifact(self, urlopener, artifact):
-        pass
+    def _try_download_artifact(self, urlopener, artifact, repository):
+        from tempfile import mkdtemp
+        from shutil import rmtree
+        from os.path import join
+
+        tmp = mkdtemp("tequila")
+        try:
+            jar = join(tmp, 'jar')
+            pom = join(tmp, 'pom')
+
+            download(urlopener, artifact.name + ':jar', repository.url + artifact.jar, jar, validate=True)
+
+            try:
+                download(urlopener, artifact.name + ':pom', repository.url + artifact.pom, pom, validate=True)
+            except:
+                self.install_with_meta(jar, artifact)
+            else:
+                self.install_with_pom(jar, pom)
+        finally:
+            rmtree(tmp, ignore_errors=True)
+            pass
+
+    def _download_artifact(self, urlopener, artifact):
+        for repo in self.repositories:
+            try:
+                self._try_download_artifact(urlopener, artifact, repo)
+                return True
+            except (IOError, ValueError):
+                continue
+        return False
 
     def resolve(self):
         urlopener = FancyURLopener()
         try:
             for artifact in self.artifacts:
-                self.download_artifact(urlopener, artifact)
+                if not self._download_artifact(urlopener, artifact):
+                    self.logger.error("Could not resolve artifact %s." % artifact.name)
+                    self.artifacts.remove(artifact)
+        except KeyboardInterrupt:
+            self.logger.info('Download interrupted by user.')
+            raise
         finally:
             urlopener.close()
 
-    @staticmethod
-    def checksum(file):
-        sha1 = hashlib.sha1()
-        with open(file, 'rb') as f, \
-                open(file + '.sha1', 'r') as file_hash:
+    def install(self, directory):
+        from os.path import join, expanduser
+        for artifact in self.artifacts:
+            copy(join(expanduser('~'), '.m2', 'repository', artifact.jar), join(directory, artifact.filename))
 
-            sha1.update(f.read())
-            return sha1.hexdigest() == file_hash.read()
+    def install_with_pom(self, file, pom):
+        self.logger.info('Installing artifact...')
+        subprocess.call(['mvn', '-q', 'install:install-file',
+                         '-Dfile=%s' % file,
+                         '-DpomFile=%s' % pom])
 
-    @staticmethod
-    def download(urlopener, name, url, target, validate=True):
-        bar_size = 30
-        last = 0
+    def install_with_meta(self, file, artifact):
+        self.logger.info('Installing artifact...')
+        subprocess.call(['mvn', '-q', 'install:install-file',
+                         '-Dfile=%s' % file,
+                         '-Dpackaging=jar',
+                         '-DgroupId=%s' % artifact.groupid,
+                         '-DartifactId=%s' % artifact.artifactid,
+                         '-Dversion=%s' % artifact.version])
 
-        def reporthook(blocknum, blocksize, totalsize):
-            nonlocal last
-            percent = blocknum * blocksize * 1e2 / totalsize
-            progress = math.floor(blocknum * blocksize * bar_size / totalsize)
-
-            if blocknum == 0:
-                sys.stdout.write('Downloading %s (%d Bytes): [%s]   0%%' % (name, totalsize, ' ' * bar_size))
-                sys.stdout.write('\033[%dD' % (bar_size + 6))
-            elif last < progress <= bar_size:
-                sys.stdout.write('#')
-                sys.stdout.write('\033[%dC%3d%%\033[%dD' % ((bar_size - progress + 2), percent, (bar_size - progress + 6)))
-
-            if percent >= 1e2:
-                sys.stdout.write('\033[%dC\n' % 6)
-
-            sys.stdout.flush()
-            last = progress
-
-        try:
-            sys.stdout.write('\x1B[?25l') # deactivate cursor
-            urlopener.retrieve(url, target, reporthook)
-
-            if validate:
-                urlopener.retrieve(url + '.sha1', name + '.sha1')
-                if not checksum(name):
-                    raise ChecksumNotMatchingError()
-        finally:
-            sys.stdout.write('\x1B[?25h') # activate cursor
-            sys.stdout.flush()
-
-
-
-
-
-
-
-
-#urlopener = FancyURLopener()
-#download(urlopener, 'worldedit.jar',
-#         'http://maven.sk89q.com/repo/com/sk89q/worldedit/6.0.0-SNAPSHOT/worldedit-6.0.0-SNAPSHOT.jar')
-#urlopener.close()
 
 

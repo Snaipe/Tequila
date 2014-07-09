@@ -1,4 +1,3 @@
 #!/bin/sh
 
-export PYTHONPATH="."
-python ../tequila/__main__.py $@
+python tequila/__main__.py $@

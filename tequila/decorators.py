@@ -10,12 +10,13 @@ def command_syntax(syntax):
 
 
 def ctl_commands(commands):
-    def wrapper(clazz):
+    def decorator(clz):
         for cmd in commands:
             def ctl(self):
-                self.invokectl('start')
-            setattr(clazz, cmd, ctl)
-    return wrapper
+                self.invokectl(cmd)
+            setattr(clz, cmd, ctl)
+        return clz
+    return decorator
 
 
 def initializer(fun):
