@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*.pyo
+dist
+build
+*.iml
+.idea
+.project
+.classpath
+.settings
+*.egg
+*.egg-info

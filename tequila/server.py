@@ -1,12 +1,18 @@
 import logging
 import os
 from shutil import copytree
-from subprocess import call
-from tequila import Environment
+from subprocess import call, Popen
 
-from tequila.config import Config
-from tequila.decorators import ctl_commands, command_syntax
+from tequila import Environment
+from tequila.config import Config, ServerConfig
+from tequila.decorators import ctl_commands, command_syntax, wrap_exception
+from tequila.exception import TequilaException
 from tequila.maven import ArtifactResolver, Artifact, Repository
+
+
+class NoSuchServerException(TequilaException):
+    def __init__(self, servername):
+        self.message = 'Could not find server %s' % servername
 
 
 @ctl_commands(['start', 'stop', 'restart', 'status', 'send'])
@@ -17,40 +23,56 @@ class Server(object):
         self.name = name
         self.home = join(Environment['SERVER_HOME'], name)
         self.config_dir = join(self.home, 'config')
-        self.config = None
-        self.plugin_home = None
+        self.config = ServerConfig(join(self.config_dir, 'tequila.config'))
 
     def load(self):
-        from os.path import join, normpath
-        self.config = Config(self.config_dir)
-        self.plugin_home = normpath(join(self.home, self.config['directories']['plugins']))
+        self.config.load()
         return self
 
     def setup(self):
         from os.path import join
         copytree(join(Environment['RESOURCE_DIRECTORY'], 'server_base'), self.home)
-        for dir in self.config['directories'].values():
-            os.makedirs(join(self.home, dir), 0o755, exist_ok=True)
-        os.chmod(self.home, 0o755)
+        self.load()
+        call(['chmod', '-R', '755', self.home])
 
     def install(self):
-        manual_downloads = {}
-        maven_resolver = ArtifactResolver()
-        maven_resolver.repositories = [Repository(name, repo) for (name, repo) in self.config['repositories'].items()]
-        for (plugin_name, plugin_url) in self.config['plugins'].items():
-            if plugin_url.startswith('maven://'):
-                maven_resolver.enqueue(Artifact.from_url(plugin_url))
-            elif plugin_url.startswith('http://') or \
-                    plugin_url.startswith('https://') or \
-                    plugin_url.startswith('ftp://'):
-                manual_downloads[plugin_name] = plugin_url
+        from os.path import join
 
+        maven_resolver = ArtifactResolver()
+        maven_resolver.repositories = [Repository(name, repo) for (name, repo) in self.config.get_repositories().items()]
+
+        server = Artifact.from_url(self.config.get_server_bin())
+
+        maven_resolver.enqueue(server)
+        for (plugin_name, plugin_url) in self.config.get_plugins().items():
+            maven_resolver.enqueue(Artifact.from_url(plugin_url))
         maven_resolver.resolve()
-        maven_resolver.install(self.plugin_home)
+
+        maven_resolver.artifacts.pop(0)
+        maven_resolver.install(join(self.home, self.config.get_plugins_dir()))
+
+        maven_resolver.install_artifact(server, join(self.home, 'server.jar'))
+
+    def get_ctl_env(self):
+        from os.path import join
+        env = os.environ.copy()
+        env['TEQUILA'] = "true"
+        env['SERVER_NAME'] = self.name
+        env['SERVER_HOME'] = self.home
+        env['SERVER_USER'] = self.config.get_user()
+        env['TEQUILA_JVM_OPTS'] = join(self.config_dir, self.config.get_jvm_opt_file())
+        env['TEQUILA_APP_OPTS'] = join(self.config_dir, self.config.get_app_opt_file())
+        env['SERVER_OPTS'] = '-W%s' % self.config.get_worlds_dir() \
+                             + ' -P%s' % self.config.get_plugins_dir()
+        return env
 
     def invokectl(self, cmd):
         from os.path import join
-        call([join(self.home, 'serverctl'), cmd])
+        call([join(self.home, 'serverctl'), cmd], env=self.get_ctl_env())
+
+    def wipe(self):
+        from shutil import rmtree
+        rmtree(self.home, ignore_errors=True)
 
 
 class ServerManager(object):
@@ -64,6 +86,7 @@ class ServerManager(object):
             except:
                 self.logger.error('Server %s has configuration errors', servername)
 
+    @wrap_exception
     @command_syntax("new <server name>")
     def cmd_new(self, name):
         if name in self.servers:
@@ -73,23 +96,29 @@ class ServerManager(object):
         server = Server(name)
         server.setup()
 
-        self.logger.info('Successfully created the new server at %s. '
-                         'Take the time to configure it, then run the install command to set it up.',
-                         server.home)
+        self.logger.info('Successfully created the new server at %s. ', server.home)
+        self.logger.info('Take the time to configure it, then run the install command to set it up.')
 
+    @wrap_exception
     @command_syntax("install <server name>")
     def cmd_install(self, name):
         if name not in self.servers:
-            print('Server %s does not exist.' % name)
-            return
+            raise NoSuchServerException(name)
 
         self.servers[name].install()
+        self.logger.info('Successfully installed all the artifacts')
 
+    @wrap_exception
     def invoke(self, fun, servers, *args):
         if len(servers) == 0:
-            servers = self.servers.values()
+            server_list = self.servers.values()
+        else:
+            try:
+                server_list = [self.servers[s] for s in servers]
+            except KeyError as e:
+                raise NoSuchServerException(e.args[0])
 
-        for server in servers:
+        for server in server_list:
             getattr(server, fun)(*args)
 
     @command_syntax("start [server1 server2 ...]")
@@ -109,5 +138,9 @@ class ServerManager(object):
         self.invoke('status', servers)
 
     @command_syntax("send <command> [server1 server2 ...]")
-    def cmd_status(self, command, *servers):
-        self.invoke('status', servers, command)
+    def cmd_send(self, command, *servers):
+        self.invoke('send', servers, command)
+
+    @command_syntax("wipe [server1 server2 ...]")
+    def cmd_wipe(self, *servers):
+        self.invoke('wipe', servers)

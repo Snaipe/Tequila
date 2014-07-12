@@ -1,10 +1,12 @@
 import hashlib
 import math
 import sys
+from tequila.exception import TequilaException
 
 
-class ChecksumNotMatchingError(Exception):
-    pass
+class ChecksumNotMatchingError(TequilaException):
+    def __init__(self, actual, expected):
+        super().__init__("File hashes not matching, got \"%s\" where expecting \"%s\"" % (actual, expected))
 
 
 def checksum(file):
@@ -13,8 +15,9 @@ def checksum(file):
             open(file + '.sha1', 'r') as file_hash:
         sha1.update(f.read())
         sum1 = sha1.hexdigest()
-        sum2 = file_hash.read()
-        return sum1 == sum2
+        sum2 = file_hash.read().strip()
+        if sum1 != sum2:
+            raise ChecksumNotMatchingError(sum1, sum2)
 
 
 def download(urlopener, name, url, target, validate=False):
@@ -53,8 +56,7 @@ def download(urlopener, name, url, target, validate=False):
 
         if validate:
             urlopener.retrieve(url + '.sha1', target + '.sha1')
-            if not checksum(target):
-                raise ChecksumNotMatchingError()
+            checksum(target)
     finally:
         sys.stdout.write('\x1B[?25h')  # activate cursor
         sys.stdout.flush()
