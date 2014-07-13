@@ -49,9 +49,9 @@ class Server(object):
         maven_resolver.resolve()
 
         maven_resolver.artifacts.pop(0)
-        maven_resolver.install(join(self.home, self.config.get_plugins_dir()))
+        maven_resolver.deploy(join(self.home, self.config.get_plugins_dir()))
 
-        maven_resolver.install_artifact(server, join(self.home, 'server.jar'))
+        maven_resolver.deploy_artifact(server, join(self.home, 'server.jar'))
 
     def get_ctl_env(self):
         from os.path import join
@@ -59,7 +59,6 @@ class Server(object):
         env['TEQUILA'] = "true"
         env['SERVER_NAME'] = self.name
         env['SERVER_HOME'] = self.home
-        env['SERVER_USER'] = self.config.get_user()
         env['TEQUILA_JVM_OPTS'] = join(self.config_dir, self.config.get_jvm_opt_file())
         env['TEQUILA_APP_OPTS'] = join(self.config_dir, self.config.get_app_opt_file())
         env['SERVER_OPTS'] = '-W%s' % self.config.get_worlds_dir() \
@@ -105,7 +104,7 @@ class ServerManager(object):
         if name not in self.servers:
             raise NoSuchServerException(name)
 
-        self.servers[name].install()
+        self.servers[name].deploy()
         self.logger.info('Successfully installed all the artifacts')
 
     @wrap_exception
@@ -144,3 +143,10 @@ class ServerManager(object):
     @command_syntax("wipe [server1 server2 ...]")
     def cmd_wipe(self, *servers):
         self.invoke('wipe', servers)
+
+    @command_syntax("download [url ...]")
+    def cmd_download(self, *urls):
+        from urllib.request import FancyURLopener
+        maven_resolver = ArtifactResolver()
+        for url in urls:
+            maven_resolver.install_plugin_jar(FancyURLopener(), url)

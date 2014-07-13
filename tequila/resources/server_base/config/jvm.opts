@@ -8,4 +8,4 @@
 -XX:+UseParNewGC
 -XX:+UseConcMarkSweepGC
 -XX:+CMSParallelRemarkEnabled
--Dlog4j.configurationFile=$SERVER_CONFIG_DIR/log4j2.xml
+-Dlog4j.configurationFile=config/log4j2.xml

@@ -5,19 +5,14 @@ if [ -z "$TEQUILA" ]; then
     exit 1
 fi
 
-if [ -z "$SERVER_NAME" ] || [ -z "$SERVER_USER" ]; then
-    echo "Missing SERVER_NAME and SERVER_USER variables"
-    exit 1
-fi
+getpid() {
+    screen -ls | grep -E "[0-9]+.$SERVER_NAME" | cut -f2 | cut -d. -f1
+}
 
 server_start() {
     export JAVA_OPTS="$JAVA_OPTS $(cat "$TEQUILA_JVM_OPTS" | sed -E 'N; s/[ \n\r\t]+/ /g')"
     export SERVER_OPTS="$SERVER_OPTS $(cat "$TEQUILA_APP_OPTS" | sed -E 'N; s/[ \n\r\t]+/ /g')"
-    screen -dmS "$SERVER_NAME" su "$SERVER_USER" -c \"java $JAVA_OPTS -jar server.jar $SERVER_OPTS\"
-}
-
-getpid() {
-    screen -ls | grep -E "[0-9]+.$SERVER_NAME" | cut -f2 | cut -d. -f1
+    screen -dmS "$SERVER_NAME" java $JAVA_OPTS -jar server.jar $SERVER_OPTS
 }
 
 server_stop() {

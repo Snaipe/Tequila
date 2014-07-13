@@ -44,10 +44,6 @@ class ServerConfig(Config):
     def get_server_bin(self):
         return 'org.bukkit:craftbukkit:1.7.9-R0.3'
 
-    @config_node('general', 'user')
-    def get_user(self):
-        return 'minecraft'
-
     @config_node('directories', 'plugins')
     def get_plugins_dir(self):
         return 'plugins'

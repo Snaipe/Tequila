@@ -3,7 +3,7 @@ import subprocess
 from string import Template
 from urllib.request import FancyURLopener
 from tequila.download import download
-from tequila.exception import TequilaException
+from tequila.exception import TequilaException, UnhandledException
 from tequila.path import copy
 import xml.etree.cElementTree as ET
 
@@ -71,6 +71,16 @@ class ArtifactUnresolvedException(TequilaException):
         super().__init__('Could not resolve the following artifacts: %s, '
                          'please check your configuration.'
                          % [artifact.name for artifact in unresolved])
+
+
+class NotAPluginException(TequilaException):
+    def __init__(self):
+        super().__init__("The downloaded jar file is not a plugin and cannot be installed")
+
+
+class InvalidPluginMetaException(TequilaException):
+    def __init__(self):
+        super().__init__("The downloaded plugin has an invalid plugin.yml")
 
 
 class ArtifactResolver(object):
@@ -149,12 +159,12 @@ class ArtifactResolver(object):
         finally:
             urlopener.close()
 
-    def install(self, directory):
+    def deploy(self, directory):
         for artifact in self.artifacts:
-            self.install_artifact(artifact, directory, True)
+            self.deploy_artifact(artifact, directory, True)
 
     @staticmethod
-    def install_artifact(artifact, target, directory=False):
+    def deploy_artifact(artifact, target, directory=False):
         from os.path import join, expanduser
         copy(expanduser('~/.m2/repository/') + artifact.jar, join(target, artifact.filename) if directory else target)
 
@@ -169,6 +179,49 @@ class ArtifactResolver(object):
 
             download(urlopener, artifact.name + ':jar', url, jar, validate=False)
             self.install_with_meta(jar, artifact)
+        finally:
+            rmtree(tmp, ignore_errors=True)
+            pass
+
+    def install_plugin_jar(self, urlopener, url):
+        from os.path import join
+        from tempfile import mkdtemp
+        from shutil import rmtree
+        import zipfile
+        import io
+
+        tmp = mkdtemp("tequila")
+        try:
+            jar = join(tmp, 'jar')
+
+            download(urlopener, url.split('/')[-1], url, jar, validate=False)
+
+            with zipfile.ZipFile(jar, 'r') as jar_file:
+
+                artifact_id = None
+                version = None
+                group_id = None
+                try:
+                    with jar_file.open('plugin.yml', 'rU') as plugin_meta:
+                        wrapper = io.TextIOWrapper(plugin_meta)
+                        for line in wrapper:
+                            if line.startswith('name:') and artifact_id is None:
+                                artifact_id = line.split(':', 1)[1].strip()
+                            if line.startswith('version:') and version is None:
+                                version = line.split(':', 1)[1].strip()
+                            if line.startswith('main:') and group_id is None:
+                                main = line.split(':', 1)[1].strip()
+                                group_id = '.'.join(main.split('.', 2)[:2])
+                            if artifact_id is not None and version is not None and group_id is not None:
+                                break
+                except Exception as e:
+                    raise UnhandledException() from e
+                    #raise NotAPluginException()
+
+                if artifact_id is None and version is None and group_id is None:
+                    raise InvalidPluginMetaException()
+
+                self.install_with_meta(jar, Artifact(group_id, artifact_id, version))
         finally:
             rmtree(tmp, ignore_errors=True)
             pass
