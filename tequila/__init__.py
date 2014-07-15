@@ -18,39 +18,55 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import logging
+import os
+from tequila.config import Config, config_node
 from tequila.exception import TequilaException
 from tequila.server import Server
 from tequila.command import Commands, command, arg
 
 
-def build_environment():
-    from tequila.path import expand
-    return {
-        'TEQUILA_HOME':       expand('${tequila_home}/'),
-        'RESOURCE_DIRECTORY': expand('${bin_dir}/resources'),
-        'SERVER_HOME':        expand('${tequila_home}/servers')
-    }
-
-Environment = build_environment()
-
-
 class Tequila(object):
 
+    @classmethod
+    def instance(cls):
+        return cls._instance
+
     def __init__(self):
+        self.__class__._instance = self
+
         logging.basicConfig(level='INFO', format="[%(name)s] %(message)s")
 
         self.logger = logging.getLogger('Tequila')
         self.commands = TequilaCommands(self)
-        pass
+        self.config = TequilaConfig('/etc/tequila/tequila.conf')
+
+        try:
+            self.config.load()
+        except:
+            pass
 
     def main(self):
         self.commands.handle()
         pass
 
-    @classmethod
-    def get_servers(cls):
-        from os import listdir
-        return listdir(Environment['SERVER_HOME'])
+    @staticmethod
+    def get_dir():
+        from os.path import dirname, realpath
+        return dirname(realpath(__file__))
+
+    def get_home(self):
+        return os.environ.get('TEQUILA_HOME') or self.config.get_default_home()
+
+    def get_resource_dir(self):
+        from os.path import join
+        return join(self.get_dir(), 'resources')
+
+    def get_servers_dir(self):
+        from os.path import join
+        return join(self.get_home(), 'servers')
+
+    def get_servers(self):
+        return os.listdir(self.get_servers_dir())
 
     def __enter__(self):
         return self
@@ -120,3 +136,10 @@ class TequilaCommands(Commands):
         maven_resolver = ArtifactResolver()
         for url in urls:
             maven_resolver.install_plugin_jar(FancyURLopener(), url)
+
+
+class TequilaConfig(Config):
+
+    @config_node('general', 'default_home')
+    def get_default_home(self):
+        return '/home/minecraft'

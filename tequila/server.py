@@ -79,10 +79,10 @@ def waitpid(pid):
 class Server(object):
 
     def __init__(self, name):
-        from tequila import Environment
+        from tequila import Tequila
         self.logger = logging.getLogger('ServerManager')
         self.name = name
-        self.home = join(Environment['SERVER_HOME'], name)
+        self.home = join(Tequila.instance().get_servers_dir(), name)
         self.config_dir = join(self.home, 'config')
         self.config = ServerConfig(join(self.config_dir, 'tequila.config'))
         self.screen = Screen(name)
@@ -102,12 +102,12 @@ class Server(object):
         return self
 
     def create(self):
-        from tequila import Environment
+        from tequila import Tequila
 
         if self.exists:
             raise ServerAlreadyExistsException(self)
 
-        copytree(join(Environment['RESOURCE_DIRECTORY'], 'server_base'), self.home)
+        copytree(join(Tequila.instance().get_resource_dir(), 'server_base'), self.home)
         call(['chmod', '-R', '755', self.home])
         self.logger.info('Created server %s at %s', self.name, self.home)
 
@@ -195,7 +195,8 @@ class Server(object):
         self.logger.info('Command sent to server %s', self.name)
 
     def status(self):
-        self.logger.info('Status of server %s : %s', self.name, 'Running' if self.screen.status != 'Dead' else 'Stopped')
+        self.logger.info('Status of server %s : %s', self.name,
+                         'Running' if self.screen.status != 'Dead' else 'Stopped')
 
     def delete(self):
         if self.screen.exists:

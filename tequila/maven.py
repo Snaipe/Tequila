@@ -25,7 +25,7 @@ from urllib.request import FancyURLopener
 
 from tequila.download import download
 from tequila.exception import TequilaException, UnhandledException
-from tequila.path import copy
+from tequila.util import copy
 
 
 class MavenMetadata(object):

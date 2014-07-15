@@ -26,7 +26,7 @@ def read(fname):
 
 setup(
     name="tequila",
-    version="1.0.0",
+    version="1.0.1",
     author="Snaipe",
     author_email="franklinmathieu@gmail.com",
     description="A minecraft server manager",
@@ -36,6 +36,7 @@ setup(
     packages=['tequila'],
     long_description=read('README.md'),
     scripts=['bin/tequila'],
+    data_files=[('/etc/tequila/', ['config/tequila.conf'])],
     include_package_data=True,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
