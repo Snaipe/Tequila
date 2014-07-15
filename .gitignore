@@ -1,0 +1,8 @@
+*
+
+!*.jpg
+!*.png
+!*.xcf
+!README.md
+!LICENSE
+!.gitignore
