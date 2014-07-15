@@ -38,8 +38,12 @@ setup(
     scripts=['bin/tequila'],
     include_package_data=True,
     classifiers=[
-        "Development Status :: 1 - Alpha",
-        "Topic :: Utilities",
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "Operating System :: POSIX",
+        "Programming Language :: Python :: 3.4",
+        "Topic :: System :: Systems Administration",
+        "Topic :: Utilities",
     ],
 )
