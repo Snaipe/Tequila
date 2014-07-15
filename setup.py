@@ -40,6 +40,6 @@ setup(
     classifiers=[
         "Development Status :: 1 - Alpha",
         "Topic :: Utilities",
-        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     ],
 )
