@@ -11,6 +11,7 @@ It provides some basic functions to create, deploy, and manage multiple servers 
 
 * [python 3][python]
 * [GNU Screen][screen]
+* [Maven 3][maven]
 
 ### With the package manager (recommended)
 
@@ -58,3 +59,4 @@ For more information on all the available commands, run `tequila -h`, and `tequi
 [logo]: ../graphics/logo.png?raw=true
 [python]: https://www.python.org/
 [screen]: http://www.gnu.org/software/screen/
+[maven]: http://maven.apache.org/
