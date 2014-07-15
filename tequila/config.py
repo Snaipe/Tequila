@@ -35,6 +35,9 @@ class Config:
         self.config_file = config_file
         self.config = ConfigParser()
 
+        # case-sensitive keys
+        self.config.optionxform = str
+
     def load(self):
         self.config.read(self.config_file)
 

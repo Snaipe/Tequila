@@ -20,7 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import errno
 import logging
 import os
-from shutil import copytree
+from os.path import join, exists
+from shutil import copytree, rmtree
 from subprocess import call
 from time import sleep
 
@@ -78,7 +79,6 @@ def waitpid(pid):
 class Server(object):
 
     def __init__(self, name):
-        from os.path import join
         from tequila import Environment
         self.logger = logging.getLogger('ServerManager')
         self.name = name
@@ -89,11 +89,10 @@ class Server(object):
 
     @property
     def exists(self):
-        return os.path.exists(self.home)
+        return exists(self.home)
 
     def load(self):
-        from os.path import exists
-        if not exists(self.home):
+        if not self.exists:
             raise ServerDoesNotExistException(self)
 
         try:
@@ -103,7 +102,6 @@ class Server(object):
         return self
 
     def create(self):
-        from os.path import join
         from tequila import Environment
 
         if self.exists:
@@ -114,25 +112,37 @@ class Server(object):
         self.logger.info('Created server %s at %s', self.name, self.home)
 
     def deploy(self):
-        from os.path import join
-
         maven_resolver = ArtifactResolver()
         maven_resolver.repositories = [Repository(name, repo)
                                        for (name, repo) in self.config.get_repositories().items()]
 
-        server = Artifact.from_string(self.config.get_server_bin())
+        plugin_dir = join(self.home, self.config.get_plugins_dir())
 
+        server = Artifact.from_string(self.config.get_server_bin())
         maven_resolver.enqueue(server)
+
+        try:
+            removed_plugins = set([f for f in os.listdir(plugin_dir) if f.endswith('.jar')])
+        except FileNotFoundError:
+            removed_plugins = set()
+
         for (plugin_name, plugin_url) in self.config.get_plugins().items():
             plugin = Artifact.from_string(plugin_url)
             plugin.filename = plugin_name + '.jar'
             maven_resolver.enqueue(plugin)
+            removed_plugins.discard(plugin.filename)
         maven_resolver.resolve()
 
         maven_resolver.artifacts.pop(0)
-        maven_resolver.deploy(join(self.home, self.config.get_plugins_dir()))
-
+        maven_resolver.deploy(plugin_dir)
         maven_resolver.deploy_artifact(server, join(self.home, 'server.jar'))
+
+        for removed in removed_plugins:
+            name = removed[:-4]
+            self.logger.info('Removing plugin %s', name)
+            os.remove(join(plugin_dir, removed))
+            rmtree(join(plugin_dir, name), ignore_errors=True)
+
         self.logger.info('Successfully deployed server %s', self.name)
 
     @staticmethod
@@ -188,7 +198,6 @@ class Server(object):
         self.logger.info('Status of server %s : %s', self.name, 'Running' if self.screen.status != 'Dead' else 'Stopped')
 
     def delete(self):
-        from shutil import rmtree
         if self.screen.exists:
             raise ServerException('Server $name is running and cannot be deleted', self)
 
