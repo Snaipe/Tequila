@@ -1,45 +1,124 @@
+"""
+Tequila: a command-line Minecraft server manager written in python
+
+Copyright (C) 2014 Snaipe
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+import errno
 import logging
 import os
 from shutil import copytree
-from subprocess import call, Popen
+from subprocess import call
+from time import sleep
 
-from tequila import Environment
-from tequila.config import Config, ServerConfig
-from tequila.decorators import ctl_commands, command_syntax, wrap_exception
+from tequila.config import ServerConfig
 from tequila.exception import TequilaException
 from tequila.maven import ArtifactResolver, Artifact, Repository
+from tequila.screen import Screen
 
 
-class NoSuchServerException(TequilaException):
-    def __init__(self, servername):
-        self.message = 'Could not find server %s' % servername
+class ServerException(TequilaException):
+    def __init__(self, message, server):
+        super().__init__(message, name=server.name, home=server.home)
+        self.server = server
 
 
-@ctl_commands(['start', 'stop', 'restart', 'status', 'send'])
+class ServerDoesNotExistException(ServerException):
+    def __init__(self, server):
+        super().__init__('Server $name does not exist', server)
+
+
+class ServerAlreadyExistsException(ServerException):
+    def __init__(self, server):
+        super().__init__('Server $name already exists', server)
+
+
+class ServerConfigurationNotFoundException(ServerException):
+    def __init__(self, server):
+        super().__init__('Could not load server $name : configuration not found', server)
+
+
+class ServerAlreadyRunningException(ServerException):
+    def __init__(self, server):
+        super().__init__('Server $name is already running', server)
+
+
+class ServerNotRunningException(ServerException):
+    def __init__(self, server):
+        super().__init__('Server $name is not running', server)
+
+
+def is_running(pid):
+    try:
+        os.kill(pid, 0)
+    except OSError as err:
+        if err.errno == errno.ESRCH:
+            return False
+    return True
+
+
+def waitpid(pid):
+    while is_running(pid):
+        sleep(0.2)
+
+
 class Server(object):
 
     def __init__(self, name):
         from os.path import join
+        from tequila import Environment
+        self.logger = logging.getLogger('ServerManager')
         self.name = name
         self.home = join(Environment['SERVER_HOME'], name)
         self.config_dir = join(self.home, 'config')
         self.config = ServerConfig(join(self.config_dir, 'tequila.config'))
+        self.screen = Screen(name)
+
+    @property
+    def exists(self):
+        return os.path.exists(self.home)
 
     def load(self):
-        self.config.load()
+        from os.path import exists
+        if not exists(self.home):
+            raise ServerDoesNotExistException(self)
+
+        try:
+            self.config.load()
+        except Exception as e:
+            raise ServerConfigurationNotFoundException(self) from e
         return self
 
-    def setup(self):
+    def create(self):
         from os.path import join
-        copytree(join(Environment['RESOURCE_DIRECTORY'], 'server_base'), self.home)
-        self.load()
-        call(['chmod', '-R', '755', self.home])
+        from tequila import Environment
 
-    def install(self):
+        if self.exists:
+            raise ServerAlreadyExistsException(self)
+
+        copytree(join(Environment['RESOURCE_DIRECTORY'], 'server_base'), self.home)
+        call(['chmod', '-R', '755', self.home])
+        self.logger.info('Created server %s at %s', self.name, self.home)
+
+    def deploy(self):
         from os.path import join
 
         maven_resolver = ArtifactResolver()
-        maven_resolver.repositories = [Repository(name, repo) for (name, repo) in self.config.get_repositories().items()]
+        maven_resolver.repositories = [Repository(name, repo)
+                                       for (name, repo) in self.config.get_repositories().items()]
 
         server = Artifact.from_url(self.config.get_server_bin())
 
@@ -52,101 +131,67 @@ class Server(object):
         maven_resolver.deploy(join(self.home, self.config.get_plugins_dir()))
 
         maven_resolver.deploy_artifact(server, join(self.home, 'server.jar'))
+        self.logger.info('Successfully deployed server %s', self.name)
 
-    def get_ctl_env(self):
-        from os.path import join
-        env = os.environ.copy()
-        env['TEQUILA'] = "true"
-        env['SERVER_NAME'] = self.name
-        env['SERVER_HOME'] = self.home
-        env['TEQUILA_JVM_OPTS'] = join(self.config_dir, self.config.get_jvm_opt_file())
-        env['TEQUILA_APP_OPTS'] = join(self.config_dir, self.config.get_app_opt_file())
-        env['SERVER_OPTS'] = '-W%s' % self.config.get_worlds_dir() \
-                             + ' -P%s' % self.config.get_plugins_dir()
-        return env
+    @staticmethod
+    def get_opts(directory, file, env):
+        with open(os.path.join(directory, file), 'r') as f:
+            return ((os.environ.get(env) or '') + f.read()).replace('\n', ' ').replace('\r', ' ')
 
-    def invokectl(self, cmd):
-        from os.path import join
-        call([join(self.home, 'serverctl'), cmd], env=self.get_ctl_env())
+    def get_jvm_opts(self):
+        return self.get_opts(self.config_dir, self.config.get_jvm_opt_file(), 'JAVA_OPTS')
 
-    def wipe(self):
-        from shutil import rmtree
-        rmtree(self.home, ignore_errors=True)
+    def get_server_opts(self):
+        return '-W%s ' % self.config.get_worlds_dir() \
+               + '-P%s ' % self.config.get_plugins_dir() \
+               + self.get_opts(self.config_dir, self.config.get_app_opt_file(), 'SERVER_OPTS')
 
+    def start(self):
+        if self.screen.exists:
+            raise ServerAlreadyRunningException(self.name)
+        old = os.getcwd()
+        try:
+            os.chdir(self.home)
+            self.screen.start('java %s -jar server.jar %s' % (self.get_jvm_opts(), self.get_server_opts()))
+            self.logger.info('Server %s started', self.name)
+        finally:
+            os.chdir(old)
 
-class ServerManager(object):
-    def __init__(self):
-        self.logger = logging.getLogger(type(self).__name__)
-        self.servers = {}
-        for servername in os.listdir(Environment['SERVER_HOME']):
-            self.servers[servername] = server = Server(servername)
-            try:
-                server.load()
-            except:
-                self.logger.error('Server %s has configuration errors', servername)
-
-    @wrap_exception
-    @command_syntax("new <server name>")
-    def cmd_new(self, name):
-        if name in self.servers:
-            self.logger.error('Could not create server %s : server already exists.', name)
+    def stop(self, force=False, harder=False):
+        if not self.screen.exists:
             return
 
-        server = Server(name)
-        server.setup()
-
-        self.logger.info('Successfully created the new server at %s. ', server.home)
-        self.logger.info('Take the time to configure it, then run the install command to set it up.')
-
-    @wrap_exception
-    @command_syntax("install <server name>")
-    def cmd_install(self, name):
-        if name not in self.servers:
-            raise NoSuchServerException(name)
-
-        self.servers[name].deploy()
-        self.logger.info('Successfully installed all the artifacts')
-
-    @wrap_exception
-    def invoke(self, fun, servers, *args):
-        if len(servers) == 0:
-            server_list = self.servers.values()
+        if force or harder:
+            self.screen.kill(harder)
         else:
-            try:
-                server_list = [self.servers[s] for s in servers]
-            except KeyError as e:
-                raise NoSuchServerException(e.args[0])
+            self.screen.send(self.config.get_stop_command())
+            waitpid(self.screen.pid)
+        self.logger.info('Server %s stopped', self.name)
 
-        for server in server_list:
-            getattr(server, fun)(*args)
+    def restart(self, force=False, harder=False):
+        self.stop(force, harder)
+        self.start()
 
-    @command_syntax("start [server1 server2 ...]")
-    def cmd_start(self, *servers):
-        self.invoke('start', servers)
+    def send(self, mc_cmd):
+        if not self.exists:
+            raise ServerDoesNotExistException(self)
 
-    @command_syntax("stop [server1 server2 ...]")
-    def cmd_stop(self, *servers):
-        self.invoke('stop', servers)
+        if not self.screen.exists:
+            raise ServerNotRunningException(self)
 
-    @command_syntax("restart [server1 server2 ...]")
-    def cmd_restart(self, *servers):
-        self.invoke('restart', servers)
+        self.screen.send(mc_cmd)
+        self.logger.info('Command sent to server %s', self.name)
 
-    @command_syntax("status [server1 server2 ...]")
-    def cmd_status(self, *servers):
-        self.invoke('status', servers)
+    def status(self):
+        self.logger.info('Status of server %s : %s', self.name, 'Alive' if self.screen.status != 'Dead' else 'Dead')
 
-    @command_syntax("send <command> [server1 server2 ...]")
-    def cmd_send(self, command, *servers):
-        self.invoke('send', servers, command)
+    def delete(self):
+        from shutil import rmtree
+        if self.screen.exists:
+            raise ServerException('Server $name is running and cannot be deleted', self)
 
-    @command_syntax("wipe [server1 server2 ...]")
-    def cmd_wipe(self, *servers):
-        self.invoke('wipe', servers)
+        if not self.exists:
+            raise ServerDoesNotExistException(self)
 
-    @command_syntax("download [url ...]")
-    def cmd_download(self, *urls):
-        from urllib.request import FancyURLopener
-        maven_resolver = ArtifactResolver()
-        for url in urls:
-            maven_resolver.install_plugin_jar(FancyURLopener(), url)
+        rmtree(self.home, ignore_errors=True)
+        self.logger.info('Deleted server %s', self.name)

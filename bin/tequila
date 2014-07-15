@@ -1,48 +1,5 @@
 #!python
-import logging
-import sys
-from tequila import Environment
-from tequila.exception import TequilaException
-from tequila.server import ServerManager
-
-
-def main():
-    from os import makedirs
-    logging.basicConfig(level='INFO', format="[%(name)s] %(message)s")
-    logger = logging.getLogger("Tequila")
-
-    makedirs(Environment['SERVER_HOME'], 0o775, True)
-
-    mgr = ServerManager()
-
-    methods = {}
-    for method in dir(mgr):
-        attr = getattr(mgr, method)
-        if callable(attr) and method.startswith('cmd_'):
-            methods[method] = attr
-
-    if len(sys.argv) == 1:
-        logger.error(
-            "Usage: %s <command> [parameters]. Valid commands are: %s",
-            sys.argv[0],
-            [k[4:] for k in methods.keys()])
-
-    try:
-        key = 'cmd_' + sys.argv[1]
-        if key in methods:
-            methods[key](*sys.argv[2:])
-        else:
-            logger.error(
-                "Unknown command %s, valid commands are: %s",
-                sys.argv[1],
-                [k[4:] for k in methods.keys()])
-    except TypeError:
-        logger.error(
-            "Invalid argument: syntax is \"%s\".",
-            methods['cmd_' + sys.argv[1]].syntax)
-    except TequilaException as e:
-        logger.error(e.message)
-
+from tequila import Tequila
 
 if __name__ == '__main__':
-    main()
+    Tequila().main()

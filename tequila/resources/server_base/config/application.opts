@@ -1,0 +1,2 @@
+-c config/server.properties
+-b config/bukkit.yml
