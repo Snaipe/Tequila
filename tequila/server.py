@@ -120,11 +120,13 @@ class Server(object):
         maven_resolver.repositories = [Repository(name, repo)
                                        for (name, repo) in self.config.get_repositories().items()]
 
-        server = Artifact.from_url(self.config.get_server_bin())
+        server = Artifact.from_string(self.config.get_server_bin())
 
         maven_resolver.enqueue(server)
         for (plugin_name, plugin_url) in self.config.get_plugins().items():
-            maven_resolver.enqueue(Artifact.from_url(plugin_url))
+            plugin = Artifact.from_string(plugin_url)
+            plugin.filename = plugin_name + '.jar'
+            maven_resolver.enqueue(plugin)
         maven_resolver.resolve()
 
         maven_resolver.artifacts.pop(0)
@@ -183,7 +185,7 @@ class Server(object):
         self.logger.info('Command sent to server %s', self.name)
 
     def status(self):
-        self.logger.info('Status of server %s : %s', self.name, 'Alive' if self.screen.status != 'Dead' else 'Dead')
+        self.logger.info('Status of server %s : %s', self.name, 'Running' if self.screen.status != 'Dead' else 'Stopped')
 
     def delete(self):
         from shutil import rmtree

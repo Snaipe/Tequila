@@ -45,12 +45,12 @@ class MavenMetadata(object):
 
 class Artifact(object):
 
-    def __init__(self, groupid, artifactid, version):
+    def __init__(self, groupid, artifactid, version, filename=None):
         self.groupid = groupid
         self.artifactid = artifactid
         self.version = version
         self.name = '%s:%s:%s' % (groupid, artifactid, version)
-        self.filename = '%s-%s.jar' % (artifactid, version)
+        self.filename = filename or '%s-%s.jar' % (artifactid, version)
 
         self.template = Template('$groupid/$artifactid/$version1/$artifactid-$version2.$ext')
 
@@ -73,9 +73,9 @@ class Artifact(object):
         return self.version.endswith('SNAPSHOT')
 
     @classmethod
-    def from_url(cls, url):
+    def from_string(cls, url):
         """
-        Constructs an artifact from a maven url (maven://groupid:artifactid:version)
+        Constructs an artifact from a maven syntax (groupid:artifactid:version)
         :type url: string
         """
         return cls(*url.split(':', 2))
