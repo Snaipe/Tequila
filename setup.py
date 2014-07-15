@@ -34,7 +34,7 @@ setup(
     keywords="minecraft server manager",
     url="http://github.com/Snaipe/tequila",
     packages=['tequila'],
-    long_description=read('README'),
+    long_description=read('README.md'),
     scripts=['bin/tequila'],
     include_package_data=True,
     classifiers=[
