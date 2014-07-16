@@ -19,7 +19,7 @@ From an elevated shell, run `pip install tequila`.
 
 ### From the source code
 
-From an elevated shell, run `pip install -e git+https://github.com/Snaipe/Tequila.git`.
+From an elevated shell, run `pip install -e git+https://github.com/Snaipe/Tequila.git#egg=tequila`.
 
 You may check if Tequila is installed by running `tequila -h`
 
@@ -27,29 +27,27 @@ You may check if Tequila is installed by running `tequila -h`
 
 Make sure you have properly installed Tequila and all of its dependencies.
 
-The first thing you might want to change is the directory where Tequila will manage the servers. 
-Tequila will try to read the value of the `TEQUILA_HOME` environment variable, and fallback to `/home/minecraft`
-if the variable is not defined -- this is why you might want to set it manually in your shell startup file or in 
-`/etc/environment`.
+1. The first thing you might want to change is the directory where Tequila will manage the servers. 
+Tequila will try to read the value of the `TEQUILA_HOME` environment variable, and fallback to the value of default_home
+specified inside `/etc/tequila/tequila.conf` if the variable is not defined -- this is why you might want to either set 
+the variable in your shell startup file or in `/etc/environment`, or change the value of default_home.
 
-To create a server, simply enter `tequila create [server name]`, then navigate to the newly created server directory.
+2. To create a server, simply enter `tequila create [server name]`, then navigate to the newly created server directory.
 There, you will find 3 files:
-
-* `application.opts`: the executable jar parameters
-* `jvm.opts`: the Java Virtual Machine parameters
-* `tequila.config`: the server configuration
-
-The `application.opts` and `jvm.opts` can be tuned to fit your specifications.
-`tequila.config` is the configuration file where you will put the repositories, plugins, and server artifacts to use
-during production.
-
-Once done, deploy your server using `tequila deploy [server name]`. This will try to resolve, download, and copy all of
+    * `application.opts`: the executable jar parameters
+    * `jvm.opts`: the Java Virtual Machine parameters
+    * `tequila.config`: the server configuration
+    
+    The `application.opts` and `jvm.opts` can be tuned to fit your specifications.
+    `tequila.config` is the configuration file where you will put the repositories, plugins, and server artifacts to use
+    during production.
+3. Once done, deploy your server using `tequila deploy [server name]`. This will try to resolve, download, and copy all of
 the artifacts needed for your server.
 
-If any artifact could not be resolved, you may manually download and install it using `tequila download [url]`, then run
+4. If any artifact could not be resolved, you may manually download and install it using `tequila download [url]`, then run
 the deploy command once again to copy it to your server.
 
-At that point, you are (almost) done. You may start your server with `tequila start [server name]`, and configure your plugins.
+5. At that point, you are (almost) done. You may start your server with `tequila start [server name]`, and configure your plugins.
 
 This covers the basic use of Tequila.
 
