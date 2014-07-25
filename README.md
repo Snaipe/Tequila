@@ -87,6 +87,23 @@ to the value you want, and BlackDog will respond accordingly.
 There are no limitations on the group id you specify, but we advise you to use something unique such as `local.blackdog`
 to prevent the plugin from being pulled from something *other* than BukkitDev.
 
+As a side note, all artifacts visible on the web service are *releases* and must be considered as such when entering
+the plugin version (i.e. don't put '-SNAPSHOT' at the end of the plugin version if you pull the plugin from BlackDog).
+
+## Contributing
+
+You need to observe the following rules for pull requests:
+
+* Your modifications must be tested.
+* Follow python's official formatting rules and be consistent with the project style.
+* Squash your commits into one if you can.
+* If new files are added, please say so in the commit message, and add the license header.
+* Keep your commit messages simple and concise. Good commit messages start with a verb ('Add', 'Fix', ...).
+* Your branch must be based off an up-to-date master, or at least must be able to be merges automatically.
+* Sign off your pull request message by appending 'Signed-off-by: <name> <email>' to the message.
+
+By submitting a pull request you accept to license your code under the GNU Public License version 3.
+
 [logo]: ../graphics/logo.png?raw=true
 [python]: https://www.python.org/
 [screen]: http://www.gnu.org/software/screen/
