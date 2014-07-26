@@ -1,3 +1,6 @@
 recursive-include tequila/resources *
+recursive-include config *
+include README.md
+include LICENSE
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
