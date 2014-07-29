@@ -1,11 +1,8 @@
 -server
 -Xmx2G
 -Xms768m
--Xmn100M
 -XX:+AggressiveOpts
--XX:+OptimizeStringConcat
--XX:+UseFastAccessorMethods
 -XX:+UseParNewGC
 -XX:+UseConcMarkSweepGC
--XX:+CMSParallelRemarkEnabled
+-XX:MaxPermSize=128M
 -Dlog4j.configurationFile=config/log4j2.xml

@@ -22,6 +22,7 @@ import logging
 import os
 from os.path import join, exists
 from shutil import copytree, rmtree
+from string import Template
 from subprocess import call
 from time import sleep
 
@@ -154,9 +155,10 @@ class Server(object):
         return self.get_opts(self.config_dir, self.config.get_jvm_opt_file(), 'JAVA_OPTS')
 
     def get_server_opts(self):
-        return '-W%s ' % self.config.get_worlds_dir() \
-               + '-P%s ' % self.config.get_plugins_dir() \
-               + self.get_opts(self.config_dir, self.config.get_app_opt_file(), 'SERVER_OPTS')
+        return Template(self.get_opts(self.config_dir, self.config.get_app_opt_file(), 'SERVER_OPTS')).substitute(
+            plugins_dir=self.config.get_plugins_dir(),
+            worlds_dir=self.config.get_worlds_dir()
+        )
 
     def start(self):
         if self.screen.exists:

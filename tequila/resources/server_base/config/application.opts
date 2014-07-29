@@ -1,2 +1,4 @@
+-P ${plugins_dir}
+-W ${worlds_dir}
 -c config/server.properties
 -b config/bukkit.yml
