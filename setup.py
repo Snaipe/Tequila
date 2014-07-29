@@ -26,7 +26,7 @@ def read(fname):
 
 setup(
     name="tequila",
-    version="1.0.2",
+    version="1.0.3",
     author="Snaipe",
     author_email="franklinmathieu@gmail.com",
     description="A minecraft server manager",
