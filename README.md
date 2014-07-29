@@ -27,13 +27,15 @@ You may check if Tequila is installed by running `tequila -h`
 
 Make sure you have properly installed Tequila and all of its dependencies.
 
-1. The first thing you might want to change is the directory where Tequila will manage the servers. 
-Tequila will try to read the value of the `TEQUILA_HOME` environment variable, and fallback to the value of default_home
-specified inside `/etc/tequila/tequila.conf` if the variable is not defined -- this is why you might want to either set 
-the variable in your shell startup file or in `/etc/environment`, or change the value of default_home.
+1. **Configure Tequila's home directory**  
+    The first thing you might want to change is the directory where Tequila will manage the servers. 
+    Tequila will try to read the value of the `TEQUILA_HOME` environment variable, and fallback to the value of default_home
+    specified inside `/etc/tequila/tequila.conf` if the variable is not defined -- this is why you might want to either set 
+    the variable in your shell startup file or in `/etc/environment`, or change the value of default_home.
 
-2. To create a server, simply enter `tequila create [server name]`, then navigate to the newly created server directory.
-There, you will find 3 files:
+2. **Create a server**  
+    To create a server, simply enter `tequila create [server name]`, then navigate to the newly created server directory.
+    There, you will find 3 files:
     * `application.opts`: the executable jar parameters
     * `jvm.opts`: the Java Virtual Machine parameters
     * `tequila.config`: the server configuration
@@ -41,13 +43,13 @@ There, you will find 3 files:
     The `application.opts` and `jvm.opts` can be tuned to fit your specifications.
     `tequila.config` is the configuration file where you will put the repositories, plugins, and server artifacts to use
     during production.
-3. Once done, deploy your server using `tequila deploy [server name]`. This will try to resolve, download, and copy all of
-the artifacts needed for your server.
+    
+3. **Deploy the server**  
+    Once done, deploy your server using `tequila deploy [server name]`. This will try to resolve, download, and copy all of
+    the artifacts needed for your server.
 
-4. (Optional) If any artifact could not be resolved, you may manually download and install it using `tequila download [url]`, then run
-the deploy command once again to copy it to your server.
-
-5. At that point, you are (almost) done. You may start your server with `tequila start [server name]`, and configure your plugins.
+5. **Start the server**  
+    At that point, you are (almost) done. You may start your server with `tequila start [server name]`, and configure your plugins.
 
 This covers the basic use of Tequila.
 
@@ -90,17 +92,44 @@ to prevent the plugin from being pulled from something *other* than BukkitDev.
 As a side note, all artifacts visible on the web service are *releases* and must be considered as such when entering
 the plugin version (i.e. don't put '-SNAPSHOT' at the end of the plugin version if you pull the plugin from BlackDog).
 
+## FAQ
+
+**Q: How can I access my server's console ?**  
+A: Tequila uses [Screen][screen] to manage the server, so for the moment you only need to attach to the associated screen.
+This may be done with the command `screen -r tequila_<name>`, where `<name>` is your server's name.
+
+**Q: Help, I attached to the console, but I can't get out !**  
+A: You need to detach from the screen by pressing "Ctrl-a, d".
+
+**Q: I changed some settings in tequila.config, how do I update the server again ?**  
+A: First, make sure your server is stopped, then run again `tequila deploy <name>`.
+
+**Q: How do I get \<Plugin X\> ?**  
+A: See answer below.
+
+**Q: Most plugins are not on maven repositories, how do I get Tequila to download those ?**  
+A: Consider using [Blackdog][blackdog] with tequila, or manually download all the needed non-maven dependencies with
+`tequila download [url]`. You could also set-up your own maven repository and put all the needed plugins in there.
+
+**Q: Why is Tequila missing \<Insert feature name here\> ?**  
+A: We gladly take suggestions on the [issue management system][issues], if you'd like to see a new feature on Tequila
+and you're a developer, feel free to fork this repository and submit a pull request -- see section [Contributing](#contributing)
+to know how to get yours accepted.
+
+**Q: I have an issue / bug, what do I do ?**  
+A: Go to the [issue management system][issues], then search if the problem has already been documented. If not, feel free to open a new ticket.
+
 ## Contributing
 
 You need to observe the following rules for pull requests:
 
-* Your modifications must be tested.
+* Your modifications must be working and tested.
 * Follow python's official formatting rules and be consistent with the project style.
 * Squash your commits into one if you can.
 * If new files are added, please say so in the commit message, and add the license header.
 * Keep your commit messages simple and concise. Good commit messages start with a verb ('Add', 'Fix', ...).
-* Your branch must be based off an up-to-date master, or at least must be able to be merges automatically.
-* Sign off your pull request message by appending 'Signed-off-by: <name> <email>' to the message.
+* Your branch must be based off an up-to-date master, or at least must be able to be merged automatically.
+* Sign off your pull request message by appending 'Signed-off-by: \<name\> \<email\>' to the message.
 
 By submitting a pull request you accept to license your code under the GNU Public License version 3.
 
@@ -110,3 +139,4 @@ By submitting a pull request you accept to license your code under the GNU Publi
 [maven]: http://maven.apache.org/
 [bukkitdev]: http://dev.bukkit.org/bukkit-plugins/
 [blackdog]: http://github.com/Snaipe/BlackDog.git
+[issues]: https://github.com/Snaipe/Tequila/issues
