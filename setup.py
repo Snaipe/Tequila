@@ -19,6 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 from setuptools import setup
+import sys
+
+if sys.version_info < (3, 0, 0):
+    print('Tequila is not supported on versions lower than 3.x, sorry !')
+    print('Your version of python is %s, try installing it with a more recent version.'
+          % '.'.join(map(str, sys.version_info[:3])))
+    sys.exit(1)
 
 
 def read(fname):
