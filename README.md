@@ -3,14 +3,23 @@
 
 Tequila is a command-line Minecraft server manager written in python.
 
+It does not aim to be a server wrapper, though it provides a simple one using GNU screen.
+
 It provides some basic functions to create, deploy, and manage multiple servers on the same host.
+
+## Features
+
+* Plugins and server jars are pulled from maven repositories, and are managed as maven dependencies.
+* Everything is command-line (no GUI) and can be done over SSH.
+* Every server is highly configurable and automated.
+* Compatible with all kinds of servers (Bukkit, Vanilla, Spigot, ...)
 
 ## Installation
 
 ### Prerequisites
 
 * [python 3][python]
-* [GNU Screen][screen]
+* [GNU Screen][screen] (Optional if using a custom server wrapper)
 * [Maven 3][maven]
 
 ### With the package manager (recommended)
