@@ -21,9 +21,9 @@ import errno
 import logging
 import os
 from os.path import join, exists
-from shutil import copytree, rmtree
+from distutils.dir_util import copy_tree, remove_tree
 from string import Template
-from subprocess import call
+from subprocess import call, Popen
 from time import sleep
 
 from tequila.config import ServerConfig
@@ -102,13 +102,22 @@ class Server(object):
             raise ServerConfigurationNotFoundException(self) from e
         return self
 
-    def create(self):
+    def create(self, force=False, merge=False):
         from tequila import Tequila
 
-        if self.exists:
+        if self.exists and not force and not merge:
             raise ServerAlreadyExistsException(self)
 
-        copytree(join(Tequila.instance().get_resource_dir(), 'server_base'), self.home)
+        if merge:
+            if self.exists:
+                self.config.load()
+                self.config.save()
+                self.logger.info('Merged configuration of server %s with the current version of Tequila.', self.name)
+                return
+            else:
+                raise ServerDoesNotExistException(self)
+
+        copy_tree(join(Tequila.instance().get_resource_dir(), 'server_base'), self.home)
         call(['chmod', '-R', '755', self.home])
         self.logger.info('Created server %s at %s', self.name, self.home)
 
@@ -142,7 +151,7 @@ class Server(object):
             name = removed[:-4]
             self.logger.info('Removing plugin %s', name)
             os.remove(join(plugin_dir, removed))
-            rmtree(join(plugin_dir, name), ignore_errors=True)
+            remove_tree(join(plugin_dir, name), verbose=False)
 
         self.logger.info('Successfully deployed server %s', self.name)
 
@@ -207,5 +216,5 @@ class Server(object):
         if not self.exists:
             raise ServerDoesNotExistException(self)
 
-        rmtree(self.home, ignore_errors=True)
+        remove_tree(self.home, verbose=False)
         self.logger.info('Deleted server %s', self.name)

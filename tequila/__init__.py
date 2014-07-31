@@ -102,7 +102,9 @@ class TequilaCommands(Commands):
                 self.tequila.logger.error(e.message)
 
     @command(name='create', arguments=[
-        arg('servers', metavar='server', type=Server, nargs='+', help='The name of the server to create')
+        arg('servers', metavar='server', type=Server, nargs='+', help='The name of the server to create'),
+        arg('-f', '--force', dest='force', action='store_true', help='Overwrites all the configuration files'),
+        arg('-m', '--merge', dest='merge', action='store_true', help='Merge old configuration files with the new ones')
     ])
     @command(name='delete', arguments=[
         arg('servers', metavar='server', type=Server, nargs='+', help='The name of the server to delete')
@@ -140,6 +142,6 @@ class TequilaCommands(Commands):
 
 class TequilaConfig(Config):
 
-    @config_node('general', 'default_home')
+    @config_node('default_home')
     def get_default_home(self):
         return '/home/minecraft'
