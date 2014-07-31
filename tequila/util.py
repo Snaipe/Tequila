@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from contextlib import contextmanager
 
 import os
 import shutil
@@ -25,3 +26,13 @@ def copy(src, dst):
     from os.path import dirname
     os.makedirs(dirname(dst), 0o755, exist_ok=True)
     shutil.copy(src, dst)
+
+
+@contextmanager
+def directory(dirname):
+    old = os.getcwd()
+    try:
+        os.chdir(dirname)
+        yield
+    finally:
+        os.chdir(old)

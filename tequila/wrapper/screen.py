@@ -18,15 +18,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
-import signal
 import re
 from subprocess import call, getoutput
+from tequila.util import directory
+from tequila.wrapper import Wrapper, wrapper
 
+@wrapper('screen')
+class Screen(Wrapper):
 
-class Screen(object):
-
-    def __init__(self, name):
-        self.name = 'tequila_' + re.sub(r'[^a-zA-Z0-9\-_]', '', name)
+    def __init__(self, server):
+        super().__init__(server)
+        self.name = 'tequila_' + re.sub(r'[^a-zA-Z0-9\-_]', '', server.name)
 
     @property
     def exists(self):
@@ -40,14 +42,18 @@ class Screen(object):
 
     @property
     def pid(self):
+        Screen.wipe()
         lines = getoutput('screen -ls | grep -E "[0-9]+\.%s"' % self.name).splitlines(keepends=False)
         return int(lines[0].split('\t')[1].split('.')[0]) if len(lines) > 0 else 0
 
-    def start(self, command):
-        call(['screen', '-q', '-dmS', self.name] + command.split())
+    def start(self):
+        env = os.environ.copy()
+        env['TEQUILA'] = 'true'
+        env['JAVA_OPTS'] = self.server.get_jvm_opts()
+        env['APP_OPTS'] = self.server.get_server_opts()
 
-    def kill(self, force=False):
-        os.kill(self.pid, signal.SIGKILL if force else signal.SIGTERM)
+        with directory(self.server.home):
+            call(['screen', '-q', '-dmS', self.name, './start'], env=env)
 
     def send(self, command):
         call(['screen', '-q', '-S', self.name, '-p', '0', '-X', 'stuff', command + '\r'])

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ -z "$TEQUILA" ]; then
+    echo "You may not call start directly from the command line."
+    exit 1
+fi
+
+java -jar $JAVA_OPTS server.jar $APP_OPTS

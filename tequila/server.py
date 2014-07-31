@@ -29,7 +29,7 @@ from time import sleep
 from tequila.config import Config, config_node
 from tequila.exception import TequilaException
 from tequila.maven import ArtifactResolver, Artifact, Repository
-from tequila.screen import Screen
+from tequila.wrapper import Wrapper
 
 
 class ServerException(TequilaException):
@@ -86,7 +86,7 @@ class Server(object):
         self.home = join(Tequila.instance().get_servers_dir(), name)
         self.config_dir = join(self.home, 'config')
         self.config = ServerConfig(join(self.config_dir, 'tequila.config'))
-        self.screen = Screen(name)
+        self.wrapper = Wrapper.get_wrapper(self.config.get_wrapper_type())(self)
 
     @property
     def exists(self):
@@ -170,47 +170,36 @@ class Server(object):
         )
 
     def start(self):
-        if self.screen.exists:
+        if self.wrapper.exists:
             raise ServerAlreadyRunningException(self.name)
-        old = os.getcwd()
-        try:
-            os.chdir(self.home)
-            self.screen.start('java %s -jar server.jar %s' % (self.get_jvm_opts(), self.get_server_opts()))
-            self.logger.info('Server %s started', self.name)
-        finally:
-            os.chdir(old)
+
+        self.wrapper.start()
+        self.logger.info('Server %s started', self.name)
 
     def stop(self, force=False, harder=False):
-        if not self.screen.exists:
-            return
-
-        if force or harder:
-            self.screen.kill(harder)
-        else:
-            self.screen.send(self.config.get_stop_command())
-            waitpid(self.screen.pid)
+        self.wrapper.stop(force, harder)
         self.logger.info('Server %s stopped', self.name)
 
     def restart(self, force=False, harder=False):
-        self.stop(force, harder)
-        self.start()
+        self.wrapper.restart(force, harder)
+        self.logger.info('Server %s restarted', self.name)
 
     def send(self, mc_cmd):
         if not self.exists:
             raise ServerDoesNotExistException(self)
 
-        if not self.screen.exists:
+        if not self.wrapper.exists:
             raise ServerNotRunningException(self)
 
-        self.screen.send(mc_cmd)
+        self.wrapper.send(mc_cmd)
         self.logger.info('Command sent to server %s', self.name)
 
     def status(self):
         self.logger.info('Status of server %s : %s', self.name,
-                         'Running' if self.screen.status != 'Dead' else 'Stopped')
+                         'Running' if self.wrapper.status != 'Dead' else 'Stopped')
 
     def delete(self):
-        if self.screen.exists:
+        if self.wrapper.exists:
             raise ServerException('Server $name is running and cannot be deleted', self)
 
         if not self.exists:
@@ -229,6 +218,10 @@ class ServerConfig(Config):
     @config_node('stop-command')
     def get_stop_command(self):
         return 'stop'
+
+    @config_node('wrapper-type')
+    def get_wrapper_type(self):
+        return 'screen'
 
     @config_node('plugins', section='directories')
     def get_plugins_dir(self):
@@ -251,3 +244,4 @@ class ServerConfig(Config):
 
     def get_plugins(self):
         return self.get_section('plugins')
+

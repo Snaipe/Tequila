@@ -40,7 +40,7 @@ setup(
     license="GPLv3",
     keywords="minecraft server manager",
     url="http://github.com/Snaipe/tequila",
-    packages=['tequila'],
+    packages=['tequila', 'tequila.wrapper'],
     long_description=read('README.md'),
     scripts=['bin/tequila'],
     data_files=[('/etc/tequila/', ['config/tequila.conf'])],
