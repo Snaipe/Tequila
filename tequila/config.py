@@ -129,36 +129,3 @@ class Config:
 
     def sections(self):
         return self.__config.sections()
-
-
-class ServerConfig(Config):
-
-    @config_node('server')
-    def get_server_bin(self):
-        return 'org.bukkit:craftbukkit:1.7.9-R0.3'
-
-    @config_node('stop-command')
-    def get_stop_command(self):
-        return 'stop'
-
-    @config_node('plugins', section='directories')
-    def get_plugins_dir(self):
-        return 'plugins'
-
-    @config_node('worlds', section='directories')
-    def get_worlds_dir(self):
-        return 'worlds'
-
-    @config_node('jvm', section='options')
-    def get_jvm_opt_file(self):
-        return 'jvm.opts'
-
-    @config_node('application', section='options')
-    def get_app_opt_file(self):
-        return 'application.opts'
-
-    def get_repositories(self):
-        return self.get_section('repositories')
-
-    def get_plugins(self):
-        return self.get_section('plugins')
