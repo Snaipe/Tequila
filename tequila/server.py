@@ -32,37 +32,6 @@ from tequila.maven import ArtifactResolver, Artifact, Repository
 from tequila.wrapper import Wrapper
 
 
-class ServerException(TequilaException):
-    def __init__(self, message, server):
-        super().__init__(message, name=server.name, home=server.home)
-        self.server = server
-
-
-class ServerDoesNotExistException(ServerException):
-    def __init__(self, server):
-        super().__init__('Server $name does not exist', server)
-
-
-class ServerAlreadyExistsException(ServerException):
-    def __init__(self, server):
-        super().__init__('Server $name already exists', server)
-
-
-class ServerConfigurationNotFoundException(ServerException):
-    def __init__(self, server):
-        super().__init__('Could not load server $name : configuration not found', server)
-
-
-class ServerAlreadyRunningException(ServerException):
-    def __init__(self, server):
-        super().__init__('Server $name is already running', server)
-
-
-class ServerNotRunningException(ServerException):
-    def __init__(self, server):
-        super().__init__('Server $name is not running', server)
-
-
 def is_running(pid):
     try:
         os.kill(pid, 0)
