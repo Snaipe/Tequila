@@ -83,7 +83,7 @@ class Wrapper(object):
         if not self.exists:
             if ignore_stopped:
                 return
-            from tequila.server import ServerNotRunningException
+            from tequila.oldserver import ServerNotRunningException
             raise ServerNotRunningException(self.server)
 
         if force or harder:
@@ -104,4 +104,4 @@ def wrapper(name):
     return decorator
 
 
-from tequila.wrapper.screen import Screen
+from .screen import Screen

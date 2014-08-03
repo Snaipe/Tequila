@@ -16,53 +16,95 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from baker import command
 
-import argparse
-import sys
-
-
-def command(name, arguments):
-    def decorator(func):
-        if not hasattr(func, 'commands'):
-            func.commands = []
-        func.commands.append((name, arguments))
-        return func
-    return decorator
+from .server import Server
 
 
-def arg(*args, **kwargs):
-    return args, kwargs
+@command(name='init')
+def cmd_init(server, force=False, merge=False):
+    """
+    :param server: The server to initialize
+    """
+    Server(server).init(force, merge)
 
 
-class Commands(object):
+@command(name='delete')
+def cmd_delete(server):
+    """
+    :param server: The server to delete
+    """
+    Server(server).load().delete()
 
-    def __init__(self):
-        self._parser = argparse.ArgumentParser()
-        subparsers = self._parser.add_subparsers(
-            dest='command',
-            title='commands',
-            description='valid commands'
-        )
 
-        self._commands = {}
-        for method in dir(self):
-            attr = getattr(self, method)
-            if callable(attr) and hasattr(attr, 'commands'):
-                for name, args in attr.commands:
-                    subparser = subparsers.add_parser(name)
-                    for (fargs, kwargs) in args:
-                        subparser.add_argument(*fargs, **kwargs)
-                    self._commands[name] = attr
+@command(name='deploy')
+def cmd_deploy(server):
+    """
+    :param server: The server to deploy
+    """
+    Server(server).load().deploy()
 
-    def handle(self):
-        if len(sys.argv) == 1:
-            self.handle_no_arg()
-            return
-        namespace = self._parser.parse_args()
-        self._commands[namespace.command](**vars(namespace))
 
-    def handle_no_arg(self):
-        self._parser.print_help()
+@command(name='status')
+def cmd_status(server):
+    """
+    :param server: The server to deploy
+    """
+    Server(server).load().status()
 
-    def get_commands(self):
-        return self._commands
+
+@command(name='start')
+def cmd_start(server):
+    """
+    :param server: The server to start
+    """
+    Server(server).load().start()
+
+
+@command(name='stop', shortopts={'force': 'f', 'Force': 'F'})
+def cmd_stop(server, force=False, Force=False):
+    """
+    :param server: The server to stop
+    :param force: send a SIGTERM to the server
+    :param Force: send a SIGKILL to the server
+    """
+    Server(server).load().stop(force, Force)
+
+
+@command(name='restart', shortopts={'force': 'f', 'Force': 'F'})
+def cmd_restart(server, force=False, Force=False):
+    """
+    :param server: The server to restart
+    :param force: send a SIGTERM to the server
+    :param Force: send a SIGKILL to the server
+    """
+    Server(server).load().restart(force, Force)
+
+
+@command(name='send')
+def cmd_send(server, *command):
+    """
+    :param server: The server to start
+    :param command: the command to send
+    """
+    Server(server).load().send(' '.join(command))
+
+
+@command(name='list')
+def cmd_list():
+    from . import Tequila
+    tequila = Tequila()
+    tequila.logger.info('Available servers: %s', ', '.join(tequila.get_servers()))
+
+
+@command(name='download')
+def cmd_download(*urls):
+    """
+    :param urls: the urls to download
+    """
+    from urllib.request import FancyURLopener
+    from tequila.network.maven import ArtifactResolver
+
+    maven_resolver = ArtifactResolver()
+    for url in urls:
+        maven_resolver.install_plugin_jar(FancyURLopener(), url)

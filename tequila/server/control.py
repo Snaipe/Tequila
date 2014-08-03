@@ -16,32 +16,29 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from contextlib import contextmanager
-
-import os
-import shutil
+import re
 
 
-def copy(src, dst):
-    from os.path import dirname
-    os.makedirs(dirname(dst), 0o755, exist_ok=True)
-    shutil.copy(src, dst)
+class Control(object):
+
+    def running(self):
+        pass
+
+    def start(self):
+        pass
+
+    def stop(self, force=False, harder=False):
+        pass
+
+    def restart(self):
+        pass
+
+    def send(self, cmd):
+        pass
 
 
-@contextmanager
-def directory(dirname):
-    old = os.getcwd()
-    try:
-        os.chdir(dirname)
-        yield
-    finally:
-        os.chdir(old)
+class Controlled(object):
 
-
-@contextmanager
-def umask(mask):
-    old = os.umask(mask)
-    try:
-        yield
-    finally:
-        os.umask(old)
+    def __init__(self, name, interface: Control=None):
+        self.name = re.sub(r'\W*', '', re.sub(r'\s+', '_', name))
+        self.control_interface = interface

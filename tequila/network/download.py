@@ -21,7 +21,7 @@ import hashlib
 import math
 import sys
 
-from tequila.exception import TequilaException
+from ..exception import TequilaException
 
 
 class ChecksumNotMatchingError(TequilaException):

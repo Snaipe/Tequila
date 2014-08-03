@@ -20,8 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
 from subprocess import call, getoutput
-from tequila.util import directory
-from tequila.wrapper import Wrapper, wrapper
+
+from ..util import directory
+from . import Wrapper, wrapper
+
 
 @wrapper('screen')
 class Screen(Wrapper):

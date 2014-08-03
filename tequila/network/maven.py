@@ -23,9 +23,9 @@ import xml.etree.cElementTree as ET
 from string import Template
 from urllib.request import FancyURLopener
 
-from tequila.download import download
-from tequila.exception import TequilaException, UnhandledException
-from tequila.util import copy
+from ..exception import TequilaException, UnhandledException
+from ..util import copy
+from . import download
 
 
 class MavenMetadata(object):

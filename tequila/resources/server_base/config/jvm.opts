@@ -1,8 +1,6 @@
 -server
 -Xmx2G
 -Xms768m
--XX:+AggressiveOpts
--XX:+UseParNewGC
 -XX:+UseConcMarkSweepGC
 -XX:MaxPermSize=128M
 -Dlog4j.configurationFile=config/log4j2.xml
