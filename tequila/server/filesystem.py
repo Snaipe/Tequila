@@ -41,11 +41,11 @@ class ServerFilesystem(object):
         self.logger = server.logger
 
     def init(self, force=False, merge=False):
-        if self.server.exists and not force and not merge:
+        if self.server.running() and not force and not merge:
             raise ServerAlreadyExistsException(self.server)
 
         if merge:
-            if self.server.exists:
+            if self.server.running():
                 self.config.load()
                 self.config.save()
                 self.logger.info('Merged configuration with the current version of Tequila.')
@@ -102,7 +102,7 @@ class ServerFilesystem(object):
         if self.server.running():
             raise ServerRunningException(self.server)
 
-        if not self.server.exists:
+        if not self.server.running():
             raise ServerDoesNotExistException(self.server)
 
         remove_tree(self.server.home, verbose=False)

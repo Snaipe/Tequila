@@ -16,14 +16,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import os
 from baker import command
 
 from .server import Server
+from .server.instance import ServerInstance, InstancePolicy
+from .util import get_uid
 
 
 @command(name='init')
 def cmd_init(server, force=False, merge=False):
     """
+    Creates a new server and populates it with configuration files
     :param server: The server to initialize
     """
     Server(server).init(force, merge)
@@ -32,6 +36,7 @@ def cmd_init(server, force=False, merge=False):
 @command(name='delete')
 def cmd_delete(server):
     """
+    Deletes an existing server
     :param server: The server to delete
     """
     Server(server).load().delete()
@@ -40,8 +45,13 @@ def cmd_delete(server):
 @command(name='deploy')
 def cmd_deploy(server):
     """
+    Deploys a server, copying all binaries where they belong
     :param server: The server to deploy
     """
+    if get_uid(server.config.get_user()) != os.getuid():
+        server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
+        return
+
     Server(server).load().deploy()
 
 
@@ -53,12 +63,37 @@ def cmd_status(server):
     Server(server).load().status()
 
 
-@command(name='start')
-def cmd_start(server):
+@command(name='start', shortopts={'instances': 'n'})
+def cmd_start(server, instances=0):
     """
     :param server: The server to start
     """
-    Server(server).load().start()
+    server = Server(server).load()
+    if instances > 0:
+        if not server.config.are_instances_enabled():
+            server.logger.error('Multiple instances are not enabled for this server.')
+            return
+
+        if server.config.get_instance_policy() == InstancePolicy.union:
+            if os.getuid() != 0:
+                server.logger.error('Union-type instances must be started as root. '
+                                    'Do not worry, the server jar will still be run '
+                                    'as the user specified in the configuration.')
+                return
+
+        elif get_uid(server.config.get_user()) != os.getuid():
+            server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
+            return
+
+        for i in range(instances):
+            instance = ServerInstance(server, i + 1)
+            instance.run()
+    else:
+        if get_uid(server.config.get_user()) != os.getuid():
+            server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
+            return
+
+        server.start()
 
 
 @command(name='stop', shortopts={'force': 'f', 'Force': 'F'})
@@ -78,6 +113,10 @@ def cmd_restart(server, force=False, Force=False):
     :param force: send a SIGTERM to the server
     :param Force: send a SIGKILL to the server
     """
+    if get_uid(server.config.get_user()) != os.getuid():
+        server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
+        return
+
     Server(server).load().restart(force, Force)
 
 

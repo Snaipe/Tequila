@@ -20,8 +20,8 @@ from ..exception import TequilaException
 
 
 class ServerException(TequilaException):
-    def __init__(self, message, server):
-        super().__init__(message, name=server.name, home=server.home)
+    def __init__(self, message, server, **kwargs):
+        super().__init__(message, name=server.name, home=server.home, **kwargs)
         self.server = server
 
 
@@ -48,3 +48,8 @@ class ServerRunningException(ServerException):
 class ServerNotRunningException(ServerException):
     def __init__(self, server):
         super().__init__('Server $name is not running', server)
+
+
+class ServerCannotBeJoinedException(ServerException):
+    def __init__(self, server):
+        super().__init__('Server $name cannot be joined', server)

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from contextlib import contextmanager
 
 import os
+from pwd import getpwnam
 import shutil
 
 
@@ -45,3 +46,34 @@ def umask(mask):
         yield
     finally:
         os.umask(old)
+
+
+def get_uid(username):
+    return getpwnam(username).pw_uid
+
+
+def do_as_user(username, func, *args, **kwargs):
+    _, _, uid, gid, _, _, _ = getpwnam(username)
+
+    pid = os.fork()
+    if pid == 0:
+        print('child: dropping privileges')
+        if os.getgid() != gid:
+            os.setregid(gid, gid)
+        if os.getuid() != uid:
+            os.setreuid(uid, uid)
+        func(*args, **kwargs)
+        print('child: exiting')
+        exit(0)
+    else:
+        print('parent: waiting')
+        os.waitpid(pid, 0)
+        print('parent: child exited')
+
+
+def delegate(obj, delegate):
+    public_attributes = [(a, getattr(delegate, a)) for a in dir(delegate) if not a.startswith('_')]
+    methods = [(n, m) for (n, m) in public_attributes if callable(m)]
+
+    for (n, m) in methods:
+        setattr(obj, n, m)

@@ -38,9 +38,9 @@ def is_running(pid):
     return True
 
 
-def waitpid(pid):
+def waitpid(pid, dt=0.2):
     while is_running(pid):
-        sleep(0.2)
+        sleep(dt)
 
 
 class Wrapper(object):
@@ -55,18 +55,22 @@ class Wrapper(object):
     def get_wrapper(cls, name):
         return cls.__wrappers[name]
 
-    def __init__(self, server):
+    def __init__(self, server, id):
         self.server = server
+        self.wrapper_id = id
 
-    @property
-    def exists(self):
+    def get_jvm_opts(self, **kwargs):
+        return self.server.get_jvm_opts(**kwargs)
+
+    def get_server_opts(self, **kwargs):
+        return self.server.get_server_opts(**kwargs)
+
+    def running(self):
         raise NotImplementedError
 
-    @property
     def status(self):
         raise NotImplementedError
 
-    @property
     def pid(self):
         raise NotImplementedError
 
@@ -77,20 +81,20 @@ class Wrapper(object):
         raise NotImplementedError
 
     def kill(self, force=False):
-        os.kill(self.pid, signal.SIGKILL if force else signal.SIGTERM)
+        os.kill(self.pid(), signal.SIGKILL if force else signal.SIGTERM)
 
     def stop(self, force=False, harder=False, ignore_stopped=True):
-        if not self.exists:
+        if not self.running():
             if ignore_stopped:
                 return
-            from tequila.oldserver import ServerNotRunningException
+            from ..exception import ServerNotRunningException
             raise ServerNotRunningException(self.server)
 
         if force or harder:
             self.kill(harder)
         else:
             self.send(self.server.config.get_stop_command())
-            waitpid(self.pid)
+            waitpid(self.pid())
 
     def restart(self, force=False, harder=False):
         self.stop(force, harder, ignore_stopped=True)
@@ -105,3 +109,5 @@ def wrapper(name):
 
 
 from .screen import Screen
+from .daemon import Daemon
+

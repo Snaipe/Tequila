@@ -21,44 +21,40 @@ import os
 import re
 from subprocess import call, getoutput
 
-from ..util import directory
+from ...util import directory
 from . import Wrapper, wrapper
 
 
 @wrapper('screen')
 class Screen(Wrapper):
 
-    def __init__(self, server):
-        super().__init__(server)
-        self.name = 'tequila_' + re.sub(r'[^a-zA-Z0-9\-_]', '', server.name)
+    def __init__(self, server, id):
+        super().__init__(server, 'tequila_' + re.sub(r'[^a-zA-Z0-9\-_]', '', id))
 
-    @property
-    def exists(self):
-        return self.pid != 0
+    def running(self):
+        return self.pid() != 0
 
-    @property
     def status(self):
         Screen.wipe()
-        lines = getoutput('screen -ls | grep -E "[0-9]+\.%s"' % self.name).splitlines(keepends=False)
+        lines = getoutput('screen -ls | grep -E "[0-9]+\.%s"' % self.wrapper_id).splitlines(keepends=False)
         return lines[0].split('\t')[2].strip('()') if len(lines) > 0 else 'Dead'
 
-    @property
     def pid(self):
         Screen.wipe()
-        lines = getoutput('screen -ls | grep -E "[0-9]+\.%s"' % self.name).splitlines(keepends=False)
+        lines = getoutput('screen -ls | grep -E "[0-9]+\\.%s"' % self.wrapper_id).splitlines(keepends=False)
         return int(lines[0].split('\t')[1].split('.')[0]) if len(lines) > 0 else 0
 
     def start(self):
         env = os.environ.copy()
         env['TEQUILA'] = 'true'
-        env['JAVA_OPTS'] = self.server.get_jvm_opts()
-        env['APP_OPTS'] = self.server.get_server_opts()
+        env['JAVA_OPTS'] = self.get_jvm_opts()
+        env['APP_OPTS'] = self.get_server_opts()
 
         with directory(self.server.home):
-            call(['screen', '-q', '-dmS', self.name, './start'], env=env)
+            call(['screen', '-q', '-dmS', self.wrapper_id, './start'], env=env)
 
     def send(self, command):
-        call(['screen', '-q', '-S', self.name, '-p', '0', '-X', 'stuff', command + '\r'])
+        call(['screen', '-q', '-S', self.wrapper_id, '-p', '0', '-X', 'stuff', command + '\r'])
 
     @classmethod
     def wipe(cls):
