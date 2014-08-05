@@ -142,6 +142,11 @@ You need to observe the following rules for pull requests:
 
 By submitting a pull request you accept to license your code under the GNU Public License version 3.
 
+## Donating
+
+If you like Tequila, consider [buying me a beer](https://www.paypal.com/cgi-bin/webscr&cmd=_s-xclick&hosted_button_id=DTNKSED9ZRY3N) !
+
+
 [logo]: ../graphics/logo.png?raw=true
 [python]: https://www.python.org/
 [screen]: http://www.gnu.org/software/screen/
