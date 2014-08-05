@@ -1,6 +1,8 @@
 ![Tequila][logo]
 ================
 
+![Downloads][downloads] ![Python versions][python_versions] ![License][license]
+
 Tequila is a command-line Minecraft server manager written in python.
 
 It does not aim to be a server wrapper, though it provides a simple one using GNU screen.
@@ -148,6 +150,10 @@ If you like Tequila, consider [buying me a beer](https://www.paypal.com/cgi-bin/
 
 
 [logo]: ../graphics/logo.png?raw=true
+[downloads]: https://pypip.in/d/tequila/badge.svg
+[python_versions]: https://pypip.in/py_versions/tequila/badge.svg
+[license]: https://pypip.in/license/tequila/badge.svg
+
 [python]: https://www.python.org/
 [screen]: http://www.gnu.org/software/screen/
 [maven]: http://maven.apache.org/
