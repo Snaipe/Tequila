@@ -57,18 +57,14 @@ def do_as_user(username, func, *args, **kwargs):
 
     pid = os.fork()
     if pid == 0:
-        print('child: dropping privileges')
         if os.getgid() != gid:
             os.setregid(gid, gid)
         if os.getuid() != uid:
             os.setreuid(uid, uid)
         func(*args, **kwargs)
-        print('child: exiting')
-        exit(0)
+        os._exit(0)
     else:
-        print('parent: waiting')
         os.waitpid(pid, 0)
-        print('parent: child exited')
 
 
 def delegate(obj, delegate):

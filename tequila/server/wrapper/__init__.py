@@ -83,6 +83,10 @@ class Wrapper(object):
     def kill(self, force=False):
         os.kill(self.pid(), signal.SIGKILL if force else signal.SIGTERM)
 
+    def wait(self, dt=0.2):
+        while is_running(self.pid()):
+            sleep(dt)
+
     def stop(self, force=False, harder=False, ignore_stopped=True):
         if not self.running():
             if ignore_stopped:

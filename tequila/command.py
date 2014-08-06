@@ -20,8 +20,34 @@ import os
 from baker import command
 
 from .server import Server
-from .server.instance import ServerInstance, InstancePolicy
+from .server.instance import ServerInstance, InstancePolicy, InstanceGroup
 from .util import get_uid
+
+
+def get_controllable(name, load=False):
+
+    if '#' in name:
+        real_name, instance_id = name.split('#', 1)
+
+        server = Server(real_name)
+        if load:
+            server.load()
+
+        if '-' in instance_id:
+            smin, smax = instance_id.split('-', 1)
+            min, max = int(smin), int(smax)
+
+            instances = []
+            for i in range(max - min + 1):
+                instances.append(ServerInstance(server, min + i))
+            controllable = InstanceGroup(server, instances)
+        else:
+            controllable = ServerInstance(server, int(instance_id))
+
+        return controllable
+    else:
+        server = Server(name)
+        return server.load() if load else server
 
 
 @command(name='init')
@@ -63,37 +89,47 @@ def cmd_status(server):
     Server(server).load().status()
 
 
-@command(name='start', shortopts={'instances': 'n'})
-def cmd_start(server, instances=0):
+@command(name='start')
+def cmd_start(server):
     """
     :param server: The server to start
     """
-    server = Server(server).load()
-    if instances > 0:
-        if not server.config.are_instances_enabled():
-            server.logger.error('Multiple instances are not enabled for this server.')
+    controllable = get_controllable(server, load=True)
+    if isinstance(controllable, ServerInstance) or isinstance(controllable, InstanceGroup):
+
+        serv = controllable.server
+
+        if not serv.config.are_instances_enabled():
+            serv.logger.error('Multiple instances are not enabled for this server.')
             return
 
-        if server.config.get_instance_policy() == InstancePolicy.union:
+        if serv.config.get_instance_policy() == InstancePolicy.union:
+            error = False
             if os.getuid() != 0:
-                server.logger.error('Union-type instances must be started as root. '
-                                    'Do not worry, the server jar will still be run '
-                                    'as the user specified in the configuration.')
+                serv.logger.error('Union-type instances must be started as root. '
+                                  'Do not worry, the server jar will still be run '
+                                  'as the user specified in the configuration.')
+                error = True
+
+            if serv.config.get_wrapper_type() == 'screen':
+                serv.logger.error('Union-type instances must not use screen as a wrapper. '
+                                  'You cannot hope to send commands or do anything other than reattaching with '
+                                  'multiple users, meaning you would have to manually stop and clean up yourself.')
+                error = True
+
+            if error:
                 return
 
-        elif get_uid(server.config.get_user()) != os.getuid():
-            server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
+        elif get_uid(serv.config.get_user()) != os.getuid():
+            serv.logger.error('Please run this command as user \'%s\'.', serv.config.get_user())
             return
 
-        for i in range(instances):
-            instance = ServerInstance(server, i + 1)
-            instance.run()
-    else:
-        if get_uid(server.config.get_user()) != os.getuid():
-            server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
+    elif isinstance(controllable, Server):
+        if get_uid(controllable.config.get_user()) != os.getuid():
+            controllable.logger.error('Please run this command as user \'%s\'.', controllable.config.get_user())
             return
 
-        server.start()
+    controllable.start()
 
 
 @command(name='stop', shortopts={'force': 'f', 'Force': 'F'})
@@ -103,7 +139,7 @@ def cmd_stop(server, force=False, Force=False):
     :param force: send a SIGTERM to the server
     :param Force: send a SIGKILL to the server
     """
-    Server(server).load().stop(force, Force)
+    get_controllable(server, load=True).stop(force, Force)
 
 
 @command(name='restart', shortopts={'force': 'f', 'Force': 'F'})
@@ -117,7 +153,7 @@ def cmd_restart(server, force=False, Force=False):
         server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
         return
 
-    Server(server).load().restart(force, Force)
+    get_controllable(server, load=True).stop(force, Force)
 
 
 @command(name='send')
@@ -126,7 +162,7 @@ def cmd_send(server, *command):
     :param server: The server to start
     :param command: the command to send
     """
-    Server(server).load().send(' '.join(command))
+    get_controllable(server, load=True).send(' '.join(command))
 
 
 @command(name='list')

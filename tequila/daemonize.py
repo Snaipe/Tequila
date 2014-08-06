@@ -55,7 +55,7 @@ def fork_and_daemonize():
     try:
         pid = os.fork()
         if pid > 0:
-            sys.exit(0)
+            os._exit(0)
     except OSError:
         sys.exit(1)
 

@@ -16,25 +16,27 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from copy import copy
 from distutils.dir_util import copy_tree, remove_tree
 from enum import Enum
 from os import makedirs
+import os
 from os.path import join, exists
 from shutil import chown
 from subprocess import call
 from tempfile import gettempdir
-import time
 
 from .control import Controlled
 from .exception import ServerRunningException, ServerException
 from .wrapper import Wrapper
 
 from ..daemonize import fork_and_daemonize
+from ..exception import TequilaException
 from ..util import delegate, do_as_user
 
 
 def init_copy(instance):
-    copy_tree(instance.server.home, instance.home)
+    copy_tree(instance.server_home, instance.home)
 
 
 def delete_copy(instance):
@@ -45,7 +47,7 @@ def init_union(instance):
     makedirs(instance.home, mode=0o755, exist_ok=True)
     chown(instance.home, user=instance.server.config.get_user())
     call(['mount', '-t', 'aufs', '-o',
-          'br=%s:%s' % (instance.home, instance.server.home),
+          'br=%s:%s' % (instance.home, instance.server_home),
           'none', instance.home])
 
 
@@ -89,13 +91,18 @@ class ServerInstance(Controlled):
         self.instance_id = self.get_id(id)
 
         self.server = copy(server)
+        self.server_home = self.server.home
         self.server.home = self.home = join(self.instance_directory, str(self.instance_id))
 
-        super().__init__(server.name, ServerControl(server))
-        self.control_interface.wrapper = InstanceWrapper(self, self.control_interface.wrapper)
-        self.server = server
+        control = ServerControl(self.server)
+        control.wrapper = InstanceWrapper(self, control.wrapper)
 
+        super().__init__(self.server.name, control)
+
+        start = self.start
         delegate(self, self.control_interface)
+        self._start = self.start
+        self.start = start
 
     def find_available_port(self, low, high):
         pass
@@ -115,7 +122,7 @@ class ServerInstance(Controlled):
 
         return i
 
-    def run(self):
+    def start(self):
         if self.control_interface.wrapper.running():
             raise ServerRunningException(self.server)
 
@@ -123,26 +130,27 @@ class ServerInstance(Controlled):
             raise InstanceNotCleanException(self)
 
         if fork_and_daemonize():
-            from .wrapper import waitpid
-
             init, delete = self.server.config.get_instance_policy().value
             init(self)
 
-            do_as_user(self.server.config.get_user(), self.control_interface.start)
+            try:
+                do_as_user(self.server.config.get_user(), self._start)
 
-            waitpid(self.control_interface.wrapper.pid(), dt=5)
-
-            # the extra sleeping is apparently required to let the system claim back the resources.
-            time.sleep(1)
-            delete(self)
+                self.control_interface.wrapper.wait(dt=5)
+            except Exception as e:
+                self.server.logger.exception(e)
+            finally:
+                delete(self)
 
 
 class InstanceWrapper(Wrapper):
 
     def __init__(self, instance, wrapper):
         self.instance = instance
-        self.wrapper = wrapper.__class__(instance.server, '')
-        # hack in a replacement ID
+        self.wrapper = copy(wrapper)
+
+        # hack in the new server and ID
+        self.wrapper.server = instance.server
         self.wrapper.wrapper_id = wrapper.wrapper_id + '_' + str(instance.instance_id)
 
         super().__init__(instance.server, self.wrapper.wrapper_id)
@@ -166,3 +174,23 @@ class InstanceWrapper(Wrapper):
         kwargs['port'] = str(self.port())
         kwargs['instance_count'] = str(self.instance.instance_id)
         return self.server.get_server_opts(**kwargs)
+
+
+class InstanceGroup(Controlled):
+
+    def __init__(self, server, instances):
+        super().__init__(server.name)
+        self.server = server
+        self.instances = instances
+
+    def __getattr__(self, item):
+        def call(*args, **kwargs):
+            from .. import Tequila
+            for i in self.instances:
+                try:
+                    getattr(i, item)(*args, **kwargs)
+                except TequilaException as e:
+                    Tequila().logger.info(e.message)
+                except Exception as e:
+                    Tequila().logger.exception(e)
+        return call
