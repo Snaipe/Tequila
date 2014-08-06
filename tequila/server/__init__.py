@@ -19,16 +19,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import os
 from os.path import join, exists
+from string import Template
 
 from .control import Controlled, Control
 from .filesystem import ServerFilesystem
 from .config import ServerConfig
-from .exception import ServerDoesNotExistException, \
+from .exception import \
+    ServerDoesNotExistException, \
     ServerConfigurationNotFoundException, \
     ServerNotRunningException, \
     ServerRunningException
+from .wrapper import Wrapper
 
-from tequila.wrapper import Wrapper
+from ..util import delegate
 
 
 class Server(Controlled):
@@ -37,23 +40,18 @@ class Server(Controlled):
         from tequila import Tequila
 
         super().__init__(name)
-
         self.tequila = Tequila()
+
+        self.home = join(self.tequila.get_servers_dir(), self.name)
+        self.configuration_directory = join(self.home, 'config')
+
         self.logger = logging.getLogger(name)
         self.config = ServerConfig(self)
         self.filesystem = ServerFilesystem(self)
         self.control_interface = ServerControl(self)
 
-        self.deploy = self.filesystem.deploy
-        self.init = self.filesystem.init
-        self.delete = self.filesystem.delete
-
-        self.start = self.control_interface.start
-        self.stop = self.control_interface.stop
-        self.restart = self.control_interface.restart
-        self.running = self.control_interface.running
-        self.send = self.control_interface.send
-        self.status = self.control_interface.status
+        delegate(self, self.filesystem)
+        delegate(self, self.control_interface)
 
     def load(self):
         if not self.exists:
@@ -66,14 +64,6 @@ class Server(Controlled):
         return self
 
     @property
-    def home(self):
-        return join(self.tequila.get_servers_dir(), self.name)
-
-    @property
-    def configuration_directory(self):
-        return join(self.home, 'config')
-
-    @property
     def exists(self):
         return exists(self.home)
 
@@ -82,11 +72,17 @@ class Server(Controlled):
         with open(os.path.join(directory, file), 'r') as f:
             return ((os.environ.get(env) or '') + f.read()).replace('\n', ' ').replace('\r', ' ')
 
-    def get_jvm_opts(self):
-        return self.get_opts(self.configuration_directory, self.config.get_jvm_opt_file(), 'JAVA_OPTS')
+    def get_jvm_opts(self, **kwargs):
+        opts = self.get_opts(self.configuration_directory, self.config.get_jvm_opt_file(), 'JAVA_OPTS')
+        return Template(opts).substitute(**kwargs)
 
-    def get_server_opts(self):
-        return self.get_opts(self.configuration_directory, self.config.get_app_opt_file(), 'SERVER_OPTS')
+    def get_server_opts(self, **kwargs):
+        opts = self.get_opts(self.configuration_directory, self.config.get_app_opt_file(), 'SERVER_OPTS')
+
+        kwargs.setdefault('plugins_dir', self.config.get_plugins_dir())
+        kwargs.setdefault('worlds_dir', self.config.get_worlds_dir())
+
+        return Template(opts).substitute(**kwargs)
 
 
 class ServerControl(Control):
@@ -94,10 +90,10 @@ class ServerControl(Control):
     def __init__(self, server: Server):
         self.server = server
         self.logger = server.logger
-        self.wrapper = Wrapper.get_wrapper(self.server.config.get_wrapper_type())(self.server)
+        self.wrapper = Wrapper.get_wrapper(self.server.config.get_wrapper_type())(self.server, self.server.name)
 
     def running(self):
-        return self.wrapper.exists
+        return self.wrapper.running()
 
     def start(self):
         if self.running():

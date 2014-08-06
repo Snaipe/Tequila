@@ -49,14 +49,14 @@ def get_resources():
 
 setup(
     name="tequila",
-    version="1.0.4",
+    version="1.1.0",
     author="Snaipe",
     author_email="franklinmathieu@gmail.com",
     description="A minecraft server manager",
     license="GPLv3",
     keywords="minecraft server manager",
     url="http://github.com/Snaipe/tequila",
-    packages=['tequila', 'tequila.wrapper', 'tequila.server', 'tequila.network'],
+    packages=['tequila', 'tequila.server.wrapper', 'tequila.server', 'tequila.network'],
     package_data={'tequila': get_resources()},
     requires=['baker'],
     long_description=read('README.md'),

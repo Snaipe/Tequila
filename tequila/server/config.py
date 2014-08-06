@@ -17,6 +17,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from os.path import join
+
+from .instance import InstancePolicy, BindingPolicy
+
 from ..config import Config, config_node
 
 
@@ -37,6 +40,10 @@ class ServerConfig(Config):
     def get_wrapper_type(self):
         return 'screen'
 
+    @config_node('user')
+    def get_user(self):
+        return 'minecraft'
+
     @config_node('plugins', section='directories')
     def get_plugins_dir(self):
         return 'plugins'
@@ -52,6 +59,22 @@ class ServerConfig(Config):
     @config_node('application', section='options')
     def get_app_opt_file(self):
         return 'application.opts'
+
+    @config_node('enabled', section='multiple-instances')
+    def are_instances_enabled(self):
+        return False
+
+    @config_node('startup-policy', section='multiple-instances', type=InstancePolicy)
+    def get_instance_policy(self):
+        return InstancePolicy.copy
+
+    @config_node('binding-policy', section='multiple-instances', type=BindingPolicy)
+    def get_instance_binding_policy(self):
+        return BindingPolicy.fixed
+
+    @config_node('port-range', section='multiple-instances', type=list)
+    def get_instance_port_range(self):
+        return [25565, 25665]
 
     def get_directories(self):
         return self.get_section('directories')
