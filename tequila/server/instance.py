@@ -129,6 +129,8 @@ class ServerInstance(Controlled):
         if exists(self.home):
             raise InstanceNotCleanException(self)
 
+        self.server.logger.info('Starting instance #%d...', self.instance_id)
+
         if fork_and_daemonize():
             init, delete = self.server.config.get_instance_policy().value
             init(self)
@@ -155,25 +157,44 @@ class InstanceWrapper(Wrapper):
 
         super().__init__(instance.server, self.wrapper.wrapper_id)
 
-        delegate(self, self.wrapper)
+        self.get_wrapper_jvm_opts = self.wrapper.get_jvm_opts
+        self.get_wrapper_server_opts = self.wrapper.get_server_opts
+
+        self.wrapper.get_jvm_opts = self.get_jvm_opts
+        self.wrapper.get_server_opts = self.get_server_opts
 
     def port(self):
         port_range = self.server.config.get_instance_port_range()
-        low = max(1 << 10, range[0] if len(port_range) > 0 else 1 << 10)
-        high = max(low, range[1] if len(port_range) > 1 else 1 << 16)
+        low = max(1 << 10, int(port_range[0]) if len(port_range) > 0 else 1 << 10)
+        high = max(low, int(port_range[1]) if len(port_range) > 1 else (1 << 16) - 1)
 
         if self.server.config.get_instance_binding_policy() == BindingPolicy.dynamic:
             return self.instance.find_available_port(low, high)
         else:
-            return min(high, low + self.instance.instance_id)
+            return min(high, low + self.instance.instance_id - 1)
 
     def get_jvm_opts(self, **kwargs):
-        return self.server.get_jvm_opts(**kwargs)
+        return self.get_wrapper_jvm_opts(**kwargs)
 
     def get_server_opts(self, **kwargs):
         kwargs['port'] = str(self.port())
         kwargs['instance_count'] = str(self.instance.instance_id)
-        return self.server.get_server_opts(**kwargs)
+        return self.get_wrapper_server_opts(**kwargs)
+
+    def start(self):
+        return self.wrapper.start()
+
+    def pid(self):
+        return self.wrapper.pid()
+
+    def status(self):
+        return self.wrapper.status()
+
+    def running(self):
+        return self.wrapper.running()
+
+    def send(self, command):
+        return self.wrapper.send(command)
 
 
 class InstanceGroup(Controlled):
