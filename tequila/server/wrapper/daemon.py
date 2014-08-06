@@ -16,7 +16,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from contextlib import ContextDecorator
 
 import os
 import re
@@ -30,21 +29,8 @@ import select
 from ..exception import ServerNotRunningException, ServerException, ServerCannotBeJoinedException
 
 from ...daemonize import fork_and_daemonize
+from ...net import socket_connection
 from ...util import directory
-
-
-class socket_connection(ContextDecorator):
-
-    def __init__(self, address):
-        self.address = address
-
-    def __enter__(self):
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.connect(self.address)
-        return self.sock
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.sock.close()
 
 
 @wrapper('daemon')

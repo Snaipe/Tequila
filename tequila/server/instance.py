@@ -28,8 +28,10 @@ from tempfile import gettempdir
 
 from .control import Controlled
 from .exception import ServerRunningException, ServerException
+
 from .wrapper import Wrapper
 
+from .. import net
 from ..daemonize import fork_and_daemonize
 from ..exception import TequilaException
 from ..util import delegate, do_as_user
@@ -105,7 +107,10 @@ class ServerInstance(Controlled):
         self.start = start
 
     def find_available_port(self, low, high):
-        pass
+        if os.name != 'posix':
+            raise NotImplementedError('Scanning available ports is only available on *nix.')
+
+        return net.get_open_ports(low, high)[0]
 
     def get_id(self, instance_id):
         if instance_id > 0:
