@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
-from os.path import realpath, basename, dirname, join
+from os.path import realpath, dirname, join
 from distutils.core import setup
 import sys
 
@@ -27,10 +27,6 @@ if sys.version_info < (3, 0, 0):
     print('Your version of python is %s, try installing it with a more recent version.'
           % '.'.join(map(str, sys.version_info[:3])))
     sys.exit(1)
-
-
-def read(fname):
-    return open(join(dirname(__file__), fname)).read()
 
 
 def get_resources():
@@ -59,7 +55,6 @@ setup(
     packages=['tequila', 'tequila.server.wrapper', 'tequila.server', 'tequila.network'],
     package_data={'tequila': get_resources()},
     requires=['baker'],
-    long_description=read('README.md'),
     scripts=['bin/tequila'],
     data_files=[('/etc/tequila/', ['config/tequila.conf'])],
     classifiers=[
