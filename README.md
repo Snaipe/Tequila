@@ -108,8 +108,10 @@ the plugin version (i.e. don't put '-SNAPSHOT' at the end of the plugin version 
 ## FAQ
 
 **Q: How can I access my server's console ?**  
-A: Tequila uses [Screen][screen] to manage the server, so for the moment you only need to attach to the associated screen.
-This may be done with the command `screen -r tequila_<name>`, where `<name>` is your server's name.
+A: If you left the `wrapper-type` option to 'screen', then Tequila will use [Screen][screen] to manage the server, 
+so for the moment you only need to attach to the associated screen.
+This may be done with the command `screen -r tequila_<name>`, where `<name>` is your server's name.  
+Otherwise, attach to your console using the method provided by your wrapper.
 
 **Q: Help, I attached to the console, but I can't get out !**  
 A: You need to detach from the screen by pressing "Ctrl-a, d".
