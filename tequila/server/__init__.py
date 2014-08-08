@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import datetime
 import logging
 import os
 from os.path import join, exists
@@ -31,7 +32,10 @@ from .exception import \
     ServerRunningException
 from .wrapper import Wrapper
 
-from ..util import delegate
+from ..util import delegate, FileMatcher
+
+from ..version import NoVersionControl
+from ..version.git import Git
 
 
 class Server(Controlled):
@@ -50,10 +54,28 @@ class Server(Controlled):
         self.filesystem = ServerFilesystem(self)
         self.control_interface = ServerControl(self)
 
+        self.config_repository = NoVersionControl()
+        self.data_repository = NoVersionControl()
+
         delegate(self, self.filesystem)
         delegate(self, self.control_interface)
 
-    def load(self):
+    @staticmethod
+    def __config_version_changer():
+        print('Please enter a version to tag this commit with (leave empty to ignore):')
+        version = input().strip()
+        return version if len(version) > 0 else None
+
+    @staticmethod
+    def __data_version_changer():
+        today = datetime.date.today()
+        return '%s-%s-%s' % today.year, today.month, today.day
+
+    def watch(self):
+        self.config_repository.watch(self.__config_version_changer)
+        self.data_repository.watch(self.__data_version_changer)
+
+    def load(self, watch=True):
         if not self.exists:
             raise ServerDoesNotExistException(self)
 
@@ -61,6 +83,18 @@ class Server(Controlled):
             self.config.load()
         except Exception as e:
             raise ServerConfigurationNotFoundException(self) from e
+
+        if self.config.is_version_control_enabled():
+            self.config_repository = Git(self.home,
+                                         filter=FileMatcher(self.config.get_version_control_config_files()))
+
+            self.data_repository = Git(self.home,
+                                       dir='.git_data',
+                                       filter=FileMatcher(self.config.get_version_control_data_files()))
+
+        if watch:
+            self.watch()
+
         return self
 
     @property

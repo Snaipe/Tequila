@@ -44,6 +44,18 @@ class ServerConfig(Config):
     def get_user(self):
         return 'minecraft'
 
+    @config_node('enabled', section='version-control', type=bool)
+    def is_version_control_enabled(self):
+        return False
+
+    @config_node('config-files', section='version-control', type=list)
+    def get_version_control_config_files(self):
+        return ['*.yml', '*.properties']
+
+    @config_node('data-files', section='version-control', type=list)
+    def get_version_control_data_files(self):
+        return ['*.dat', '*.dat_old', '*.dat_mcr', '*.mca', '*.json']
+
     @config_node('plugins', section='directories')
     def get_plugins_dir(self):
         return 'plugins'

@@ -26,11 +26,11 @@ from .server.group import ServerGroup
 from .util import get_uid
 
 
-def get_controllable(name, load=False):
+def get_controllable(name, load=False, watch=True):
 
     if name[0] == '@':
         group = ServerGroup(name[1:])
-        group.load(load)
+        group.load(load, watch)
 
         return group
 
@@ -39,7 +39,7 @@ def get_controllable(name, load=False):
 
         server = Server(real_name)
         if load:
-            server.load()
+            server.load(watch)
 
         if '-' in instance_id:
             smin, smax = instance_id.split('-', 1)
@@ -55,7 +55,7 @@ def get_controllable(name, load=False):
         return controllable
     else:
         server = Server(name)
-        return server.load() if load else server
+        return server.load(watch) if load else server
 
 
 @command(name='init')
@@ -73,7 +73,7 @@ def cmd_delete(server):
     Deletes an existing server
     :param server: The server to delete
     """
-    Server(server).load().delete()
+    Server(server).load(watch=False).delete()
 
 
 @command(name='deploy')
@@ -97,7 +97,7 @@ def cmd_status(entity=None):
     :param entity: The entity to get the status from.
     """
     if entity:
-        print(get_controllable(entity, load=True).status())
+        print(get_controllable(entity, load=True, watch=False).status())
     else:
         from . import Tequila
         tequila = Tequila()
@@ -106,7 +106,7 @@ def cmd_status(entity=None):
         for s in tequila.get_servers():
             server = Server(s)
             try:
-                msg = server.load().status()
+                msg = server.load(watch=False).status()
             except:
                 msg = server.get_status_error()
 
@@ -116,7 +116,7 @@ def cmd_status(entity=None):
         for g in tequila.get_groups():
             group = ServerGroup(g)
             try:
-                msg = group.load(load_servers=False).status()
+                msg = group.load(load_servers=False, watch=False).status()
             except:
                 msg = group.name + ': Error'
 
@@ -174,7 +174,7 @@ def cmd_stop(entity, force=False, Force=False):
     :param force: send a SIGTERM to the entity
     :param Force: send a SIGKILL to the entity
     """
-    get_controllable(entity, load=True).stop(force, Force)
+    get_controllable(entity, load=True, watch=False).stop(force, Force)
 
 
 @command(name='restart', shortopts={'force': 'f', 'Force': 'F'})
@@ -185,7 +185,7 @@ def cmd_restart(entity, force=False, Force=False):
     :param force: send a SIGTERM to the entity
     :param Force: send a SIGKILL to the entity
     """
-    get_controllable(entity, load=True).stop(force, Force)
+    get_controllable(entity, load=True, watch=False).stop(force, Force)
     cmd_start(entity)
 
 
@@ -196,7 +196,7 @@ def cmd_send(entity, *command):
     :param entity: The entity to start
     :param command: the command to send
     """
-    get_controllable(entity, load=True).send(' '.join(command))
+    get_controllable(entity, load=True, watch=False).send(' '.join(command))
 
 
 group_bakery = Baker()
@@ -226,7 +226,7 @@ def cmd_group_add(name, server):
     :param name: The name of the server group
     :param server: The name of the server to add
     """
-    ServerGroup(name).load().add_server(Server(server)).save()
+    ServerGroup(name).load(watch=False).add_server(Server(server)).save()
 
 
 @group_bakery.command(name='rm')
@@ -236,7 +236,7 @@ def cmd_group_rm(name, server):
     :param name: The name of the server group
     :param server: The name of the server to remove
     """
-    ServerGroup(name).load().remove_server(Server(server)).save()
+    ServerGroup(name).load(watch=False).remove_server(Server(server)).save()
 
 
 @group_bakery.command(name='delete')

@@ -17,10 +17,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from contextlib import contextmanager
+from fnmatch import fnmatch
 
 import os
 from pwd import getpwnam
 import shutil
+import sys
 
 
 def copy(src, dst):
@@ -46,6 +48,25 @@ def umask(mask):
         yield
     finally:
         os.umask(old)
+
+
+class FileMatcher(object):
+
+    def __init__(self, patterns):
+        self.patterns = patterns
+
+    def __call__(self, file):
+        for pattern in self.patterns:
+            if fnmatch(file, pattern):
+                return True
+        return False
+
+
+def ask(message, default=False):
+    if default:
+        return input(message + " [Y/n]:").lower().strip() == "n"
+    else:
+        return input(message + " [y/N]:").lower().strip() == "y"
 
 
 def get_uid(username):
