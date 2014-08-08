@@ -74,11 +74,12 @@ def cmd_deploy(server):
     Deploys a server, copying all binaries where they belong
     :param server: The server to deploy
     """
+    server = Server(server).load()
     if get_uid(server.config.get_user()) != os.getuid():
         server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
         return
 
-    Server(server).load().deploy()
+    server.deploy()
 
 
 @command(name='status')
@@ -149,11 +150,8 @@ def cmd_restart(server, force=False, Force=False):
     :param force: send a SIGTERM to the server
     :param Force: send a SIGKILL to the server
     """
-    if get_uid(server.config.get_user()) != os.getuid():
-        server.logger.error('Please run this command as user \'%s\'.', server.config.get_user())
-        return
-
     get_controllable(server, load=True).stop(force, Force)
+    cmd_start(server)
 
 
 @command(name='send')
