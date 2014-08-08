@@ -91,17 +91,42 @@ def cmd_deploy(server):
 
 
 @command(name='status')
-def cmd_status(server):
+def cmd_status(entity=None):
     """
-    :param server: The server to deploy
+    Prints the status of Tequila or one entity.
+    :param entity: The entity to get the status from.
     """
-    Server(server).load().status()
+    if entity:
+        print(get_controllable(entity, load=True).status())
+    else:
+        from . import Tequila
+        tequila = Tequila()
 
+        print('[== Servers ==]')
+        for s in tequila.get_servers():
+            server = Server(s)
+            try:
+                msg = server.load().status()
+            except:
+                msg = server.get_status_error()
+
+            print('  - ' + msg)
+
+        print('\n[== Groups ==]')
+        for g in tequila.get_groups():
+            group = ServerGroup(g)
+            try:
+                msg = group.load(load_servers=False).status()
+            except:
+                msg = group.name + ': Error'
+
+            print('  - ' + msg)
 
 @command(name='start')
 def cmd_start(server):
     """
-    :param server: The server to start
+    Starts an entity.
+    :param entity: The entity to start
     """
     controllable = get_controllable(server, load=True)
     if isinstance(controllable, ServerInstance) or isinstance(controllable, InstanceGroup):
@@ -142,40 +167,36 @@ def cmd_start(server):
 
 
 @command(name='stop', shortopts={'force': 'f', 'Force': 'F'})
-def cmd_stop(server, force=False, Force=False):
+def cmd_stop(entity, force=False, Force=False):
     """
-    :param server: The server to stop
-    :param force: send a SIGTERM to the server
-    :param Force: send a SIGKILL to the server
+    Stops an entity.
+    :param entity: The entity to stop
+    :param force: send a SIGTERM to the entity
+    :param Force: send a SIGKILL to the entity
     """
-    get_controllable(server, load=True).stop(force, Force)
+    get_controllable(entity, load=True).stop(force, Force)
 
 
 @command(name='restart', shortopts={'force': 'f', 'Force': 'F'})
-def cmd_restart(server, force=False, Force=False):
+def cmd_restart(entity, force=False, Force=False):
     """
-    :param server: The server to restart
-    :param force: send a SIGTERM to the server
-    :param Force: send a SIGKILL to the server
+    Restarts an entity.
+    :param server: The entity to restart
+    :param force: send a SIGTERM to the entity
+    :param Force: send a SIGKILL to the entity
     """
-    get_controllable(server, load=True).stop(force, Force)
-    cmd_start(server)
+    get_controllable(entity, load=True).stop(force, Force)
+    cmd_start(entity)
 
 
 @command(name='send')
-def cmd_send(server, *command):
+def cmd_send(entity, *command):
     """
-    :param server: The server to start
+    Send a command to an entity.
+    :param entity: The entity to start
     :param command: the command to send
     """
-    get_controllable(server, load=True).send(' '.join(command))
-
-
-@command(name='list')
-def cmd_list():
-    from . import Tequila
-    tequila = Tequila()
-    tequila.logger.info('Available servers: %s', ', '.join(tequila.get_servers()))
+    get_controllable(entity, load=True).send(' '.join(command))
 
 
 group_bakery = Baker()
@@ -183,32 +204,54 @@ group_bakery = Baker()
 
 @command(name='group')
 def cmd_group(*args, **kwargs):
+    """
+    The main group subcommand.
+    """
     group_bakery.run(argv=[' '.join(sys.argv[:2])] + sys.argv[2:])
 
 
 @group_bakery.command(name='init')
 def cmd_group_init(name):
+    """
+    Create a new server group.
+    :param name: The name of the group to create (without @)
+    """
     ServerGroup(name).save()
 
 
 @group_bakery.command(name='add')
-def cmd_group_init(name, server):
+def cmd_group_add(name, server):
+    """
+    Adds a server to the server group.
+    :param name: The name of the server group
+    :param server: The name of the server to add
+    """
     ServerGroup(name).load().add_server(Server(server)).save()
 
 
 @group_bakery.command(name='rm')
 def cmd_group_rm(name, server):
+    """
+    Removes a server from the server group.
+    :param name: The name of the server group
+    :param server: The name of the server to remove
+    """
     ServerGroup(name).load().remove_server(Server(server)).save()
 
 
 @group_bakery.command(name='delete')
-def cmd_group_rm(name):
+def cmd_group_delete(name):
+    """
+    Deletes a server group.
+    :param name: The name of the server group to delete
+    """
     os.remove(ServerGroup(name).file)
 
 
 @command(name='download')
 def cmd_download(*urls):
     """
+    Download and install an artifact from an url.
     :param urls: the urls to download
     """
     from urllib.request import FancyURLopener

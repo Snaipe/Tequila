@@ -79,6 +79,9 @@ class Tequila(object):
     def get_servers(self):
         return os.listdir(self.get_servers_dir())
 
+    def get_groups(self):
+        return [f[:-6] for f in os.listdir(self.get_groups_dir())]
+
 
 class TequilaConfig(Config):
 

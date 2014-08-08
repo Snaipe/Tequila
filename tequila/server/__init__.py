@@ -84,6 +84,9 @@ class Server(Controlled):
 
         return Template(opts).substitute(**kwargs)
 
+    def get_status_error(self):
+        return self.name + ': Error'
+
 
 class ServerControl(Control):
 
@@ -121,4 +124,7 @@ class ServerControl(Control):
         self.logger.info('Sent command \'%s\'', mc_cmd)
 
     def status(self):
-        self.logger.info('Status: %s', 'Running' if self.running() else 'Stopped')
+        return Template('$name: $state').substitute(
+            name=self.server.name,
+            state='Running' if self.running() else 'Stopped'
+        )

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import os
 from os.path import join
+from string import Template
 
 from .config import ServerGroupConfig
 from .exception import ServerGroupDoesNotExistException
@@ -73,6 +74,12 @@ class ServerGroup(Controlled):
     def remove_server(self, server):
         self.servers.pop(server.name)
         return self
+
+    def status(self):
+        return Template('$name: $servers').substitute(
+            name=self.name,
+            servers=str(list(self.servers.keys()))
+        )
 
     def __getattr__(self, item):
         def call(*args, **kwargs):
