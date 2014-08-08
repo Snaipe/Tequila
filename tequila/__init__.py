@@ -72,6 +72,10 @@ class Tequila(object):
         from os.path import join
         return join(self.get_home(), 'servers')
 
+    def get_groups_dir(self):
+        from os.path import join
+        return join(self.get_home(), 'groups')
+
     def get_servers(self):
         return os.listdir(self.get_servers_dir())
 

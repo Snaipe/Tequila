@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from configparser import ConfigParser
 from enum import Enum
 from functools import wraps
+from os import makedirs
+from os.path import dirname
 import re
 
 
@@ -104,6 +106,7 @@ class Config:
 
     def save(self):
         save(self.__config, self, 'general')
+        makedirs(dirname(self.config_file), exist_ok=True)
         with open(self.config_file, 'w') as fp:
             self.__config.write(fp)
 

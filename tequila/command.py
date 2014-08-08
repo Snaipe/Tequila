@@ -17,16 +17,24 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
-from baker import command
+from baker import command, Baker
+import sys
 
 from .server import Server
 from .server.instance import ServerInstance, InstancePolicy, InstanceGroup
+from .server.group import ServerGroup
 from .util import get_uid
 
 
 def get_controllable(name, load=False):
 
-    if '#' in name:
+    if name[0] == '@':
+        group = ServerGroup(name[1:])
+        group.load(load)
+
+        return group
+
+    elif '#' in name:
         real_name, instance_id = name.split('#', 1)
 
         server = Server(real_name)
@@ -98,7 +106,7 @@ def cmd_start(server):
     controllable = get_controllable(server, load=True)
     if isinstance(controllable, ServerInstance) or isinstance(controllable, InstanceGroup):
 
-        serv = controllable.server
+        serv = controllable.serverTrue
 
         if not serv.config.are_instances_enabled():
             serv.logger.error('Multiple instances are not enabled for this server.')
@@ -168,6 +176,34 @@ def cmd_list():
     from . import Tequila
     tequila = Tequila()
     tequila.logger.info('Available servers: %s', ', '.join(tequila.get_servers()))
+
+
+group_bakery = Baker()
+
+
+@command(name='group')
+def cmd_group(*args, **kwargs):
+    group_bakery.run(argv=[' '.join(sys.argv[:2])] + sys.argv[2:])
+
+
+@group_bakery.command(name='init')
+def cmd_group_init(name):
+    ServerGroup(name).save()
+
+
+@group_bakery.command(name='add')
+def cmd_group_init(name, server):
+    ServerGroup(name).load().add_server(Server(server)).save()
+
+
+@group_bakery.command(name='rm')
+def cmd_group_rm(name, server):
+    ServerGroup(name).load().remove_server(Server(server)).save()
+
+
+@group_bakery.command(name='delete')
+def cmd_group_rm(name):
+    os.remove(ServerGroup(name).file)
 
 
 @command(name='download')
