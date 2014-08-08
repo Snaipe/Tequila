@@ -47,7 +47,7 @@ Make sure you have properly installed Tequila and all of its dependencies.
     the variable in your shell startup file or in `/etc/environment`, or change the value of default_home.
 
 2. **Create a server**  
-    To create a server, simply enter `tequila create [server name]`, then navigate to the newly created server directory.
+    To create a server, simply enter `tequila init [server name]`, then navigate to the newly created server directory.
     There, you will find 3 files:
     * `application.opts`: the executable jar parameters
     * `jvm.opts`: the Java Virtual Machine parameters
