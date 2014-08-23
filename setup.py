@@ -52,7 +52,7 @@ setup(
     license="GPLv3",
     keywords="minecraft server manager",
     url="http://github.com/Snaipe/tequila",
-    packages=['tequila', 'tequila.server.wrapper', 'tequila.server.group', 'tequila.server', 'tequila.network'],
+    packages=['tequila', 'tequila.server.wrapper', 'tequila.server.group', 'tequila.server', 'tequila.network', 'tequila.version'],
     package_data={'tequila': get_resources()},
     requires=['baker'],
     scripts=['bin/tequila'],

@@ -61,9 +61,9 @@ def load(config: ConfigParser, obj, section):
                 val = [e.strip() for e in val.split(',')]
             elif method.config_type == bool:
                 try:
-                    val = config.getboolean(real_section, method.config_node, fallback=None)
+                    val = config.getboolean(real_section, method.config_node, fallback=False)
                 except ValueError:
-                    val = None
+                    val = False
             elif issubclass(method.config_type, Enum):
                 val = method.config_type.from_string(val)
 

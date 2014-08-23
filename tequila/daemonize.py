@@ -59,5 +59,5 @@ def fork_and_daemonize():
     except OSError:
         sys.exit(1)
 
-    redirect_stdio()
+    #redirect_stdio()
     return True

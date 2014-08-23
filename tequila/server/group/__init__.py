@@ -44,7 +44,7 @@ class ServerGroup(Controlled):
     def exists(self):
         return os.path.exists(self.file)
 
-    def load(self, load_servers=False):
+    def load(self, load_servers=False, watch=True):
         if not self.exists():
             raise ServerGroupDoesNotExistException(self)
 
@@ -53,7 +53,7 @@ class ServerGroup(Controlled):
             try:
                 server = Server(s)
                 if load_servers:
-                    server.load()
+                    server.load(watch)
                 self.servers[server.name] = server
             except TequilaException as e:
                 self.logger.info(e.message)

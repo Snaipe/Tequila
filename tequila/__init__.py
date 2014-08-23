@@ -88,3 +88,7 @@ class TequilaConfig(Config):
     @config_node('default_home')
     def get_default_home(self):
         return '/home/minecraft'
+
+    @config_node('general', 'use-git')
+    def uses_git(self):
+        return True
