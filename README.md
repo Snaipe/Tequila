@@ -1,6 +1,10 @@
 ![Tequila][logo]
 ================
 
+[![Downloads][downloads]][pypi]
+[![Python versions][python_versions]][pypi]
+[![License][license]](./LICENSE)
+
 Tequila is a command-line Minecraft server manager written in python.
 
 It does not aim to be a server wrapper, though it provides a simple one using GNU screen.
@@ -43,7 +47,7 @@ Make sure you have properly installed Tequila and all of its dependencies.
     the variable in your shell startup file or in `/etc/environment`, or change the value of default_home.
 
 2. **Create a server**  
-    To create a server, simply enter `tequila create [server name]`, then navigate to the newly created server directory.
+    To create a server, simply enter `tequila init [server name]`, then navigate to the newly created server directory.
     There, you will find 3 files:
     * `application.opts`: the executable jar parameters
     * `jvm.opts`: the Java Virtual Machine parameters
@@ -104,8 +108,10 @@ the plugin version (i.e. don't put '-SNAPSHOT' at the end of the plugin version 
 ## FAQ
 
 **Q: How can I access my server's console ?**  
-A: Tequila uses [Screen][screen] to manage the server, so for the moment you only need to attach to the associated screen.
-This may be done with the command `screen -r tequila_<name>`, where `<name>` is your server's name.
+A: If you left the `wrapper-type` option to 'screen', then Tequila will use [Screen][screen] to manage the server, 
+so for the moment you only need to attach to the associated screen.
+This may be done with the command `screen -r tequila_<name>`, where `<name>` is your server's name.  
+Otherwise, attach to your console using the method provided by your wrapper.
 
 **Q: Help, I attached to the console, but I can't get out !**  
 A: You need to detach from the screen by pressing "Ctrl-a, d".
@@ -142,7 +148,17 @@ You need to observe the following rules for pull requests:
 
 By submitting a pull request you accept to license your code under the GNU Public License version 3.
 
+## Donating
+
+If you like Tequila, consider [buying me a beer](https://www.paypal.com/cgi-bin/webscr&cmd=_s-xclick&hosted_button_id=DTNKSED9ZRY3N) !
+
+
 [logo]: ../graphics/logo.png?raw=true
+[downloads]: https://pypip.in/d/tequila/badge.svg
+[python_versions]: https://pypip.in/py_versions/tequila/badge.svg
+[license]: https://pypip.in/license/tequila/badge.svg
+
+[pypi]: https://pypi.python.org/pypi/tequila/
 [python]: https://www.python.org/
 [screen]: http://www.gnu.org/software/screen/
 [maven]: http://maven.apache.org/
