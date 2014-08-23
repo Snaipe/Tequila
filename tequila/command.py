@@ -131,7 +131,7 @@ def cmd_start(server):
     controllable = get_controllable(server, load=True)
     if isinstance(controllable, ServerInstance) or isinstance(controllable, InstanceGroup):
 
-        serv = controllable.serverTrue
+        serv = controllable.server
 
         if not serv.config.are_instances_enabled():
             serv.logger.error('Multiple instances are not enabled for this server.')

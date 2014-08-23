@@ -45,7 +45,7 @@ def get_resources():
 
 setup(
     name="tequila",
-    version="1.1.0",
+    version="1.1.1",
     author="Snaipe",
     author_email="franklinmathieu@gmail.com",
     description="A minecraft server manager",
