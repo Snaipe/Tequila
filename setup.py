@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 from os.path import realpath, dirname, join
-from distutils.core import setup
+from setuptools import setup
 import sys
 
 if sys.version_info < (3, 0, 0):
@@ -57,6 +57,7 @@ setup(
     requires=['baker'],
     scripts=['bin/tequila'],
     data_files=[('/etc/tequila/', ['config/tequila.conf'])],
+    include_package_data=True,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
